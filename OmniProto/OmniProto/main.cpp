@@ -6,15 +6,12 @@
 #include<ft2build.h>
 #include FT_FREETYPE_H
 
-#include<assimp\mesh.h>
-
 #include<iostream>
 #include<string>
 
 #include "shader.h"
 #include "camera.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "model.h"
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -157,7 +154,7 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	int width, height, nrChans;
-	unsigned char* texData = stbi_load("C:/Users/Milanovic/Desktop/awesomeface.png", &width, &height, &nrChans, 0);
+	unsigned char* texData = stbi_load("C:/Users/Nemanja/Desktop/OpenGLAssets/awesomeface.png", &width, &height, &nrChans, 0);
 	if (texData)
 	{
 		if (nrChans == 3)
@@ -180,7 +177,7 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	texData = stbi_load("C:/Users/Milanovic/Desktop/block_solid.png", &width, &height, &nrChans, 0);
+	texData = stbi_load("C:/Users/Nemanja/Desktop/OpenGLAssets/container2.png", &width, &height, &nrChans, 0);
 	if (texData)
 	{
 		if (nrChans == 3)
@@ -199,7 +196,7 @@ int main()
 	triangleShader.setInt("texture1", 0);
 	triangleShader.setInt("texture2", 1);
 
-
+	Model nanoSuit("C:/Users/Nemanja/Desktop/OpenGLAssets/NanoSuit/nanosuit.obj");
 	//================================================================================
 	//Main loop
 	//================================================================================
@@ -223,6 +220,7 @@ int main()
 		triangleShader.setMat4("view", view);
 		triangleShader.setMat4("projection", projection);
 
+
 		for (int i = 0; i < 10; i++)
 		{
 			glm::mat4 model = glm::mat4(1.0f);
@@ -239,7 +237,11 @@ int main()
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		}
-
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
+		model = glm::scale(model, glm::vec3(.1f, .1f, .1f));
+		triangleShader.setMat4("model", model);
+		nanoSuit.draw(triangleShader);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
