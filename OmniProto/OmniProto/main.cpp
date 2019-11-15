@@ -12,6 +12,7 @@
 #include "shader.h"
 #include "camera.h"
 #include "model.h"
+#include "ResourceManager.h"
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -56,8 +57,6 @@ int main()
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-	stbi_set_flip_vertically_on_load(true);
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
@@ -126,6 +125,7 @@ int main()
 	};
 
 	Shader triangleShader("../OmniProto/triangle.vert", "../OmniProto/triangle.frag");
+	Shader modelShader("../OmniProto/basicModel.vert", "../OmniProto/basicModel.frag");
 
 	unsigned int VBO, VAO;
 	glGenVertexArrays(1, &VAO);
@@ -145,53 +145,10 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 
-	unsigned int texture1, texture2;
-	glGenTextures(1, &texture1);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture1);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	int width, height, nrChans;
-	unsigned char* texData = stbi_load("C:/Users/Nemanja/Desktop/OpenGLAssets/awesomeface.png", &width, &height, &nrChans, 0);
-	if (texData)
-	{
-		if (nrChans == 3)
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, texData);
-		else
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texData);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	stbi_image_free(texData);
-
-	glGenTextures(1, &texture2);
+	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/awesomeface.png", "face");
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, texture2);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	texData = stbi_load("C:/Users/Nemanja/Desktop/OpenGLAssets/container2.png", &width, &height, &nrChans, 0);
-	if (texData)
-	{
-		if (nrChans == 3)
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, texData);
-		else
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texData);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	stbi_image_free(texData);
-
+	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/container2.png", "container");
 	triangleShader.use();
 	triangleShader.setInt("texture1", 0);
 	triangleShader.setInt("texture2", 1);
@@ -230,9 +187,9 @@ int main()
 			triangleShader.setMat4("model", model);
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, texture1);
+			ResourceManager::getTexture("face").bind();
 			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, texture2);
+			ResourceManager::getTexture("container").bind();
 			glBindVertexArray(VAO);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 
@@ -240,8 +197,11 @@ int main()
 		glm::mat4 model = glm::mat4(1.0f);
 		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
 		model = glm::scale(model, glm::vec3(.1f, .1f, .1f));
-		triangleShader.setMat4("model", model);
-		nanoSuit.draw(triangleShader);
+		modelShader.use();
+		modelShader.setMat4("model", model);
+		modelShader.setMat4("view", view);
+		modelShader.setMat4("projection", projection);
+		nanoSuit.draw(modelShader);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
