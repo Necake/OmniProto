@@ -2,6 +2,7 @@
 
 map<string, Texture> ResourceManager::Textures;
 map<string, Shader> ResourceManager::Shaders;
+map<string, Model> ResourceManager::Models;
 
 Texture& ResourceManager::loadTexture(const char* texturePath, std::string name)
 {
@@ -13,6 +14,18 @@ Texture& ResourceManager::loadTexture(const char* texturePath, std::string name)
 Texture& ResourceManager::getTexture(std::string name)
 {
 	return Textures[name];
+}
+
+Model& ResourceManager::loadModel(const char* modelPath, std::string name)
+{
+	Model model(modelPath);
+	Models[name] = model;
+	return Models[name];
+}
+
+Model& ResourceManager::getModel(std::string name)
+{
+	return Models[name];
 }
 
 void ResourceManager::Clear()

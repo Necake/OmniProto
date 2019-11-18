@@ -1,10 +1,19 @@
 #include "model.h"
 
-
 void Model::draw(Shader shader)
 {
 	for (unsigned int i = 0; i < meshes.size(); i++)
 		meshes[i].draw(shader);
+}
+
+void Model::getSpecs()
+{
+	int numVerts = 0;
+	for (unsigned int i = 0; i < meshes.size(); i++)
+	{
+		numVerts += meshes[i].vertices.size();
+	}
+	std::cout << "Loaded model with " << numVerts << " vertices." << std::endl;
 }
 
 void Model::loadModel(std::string path)

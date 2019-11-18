@@ -125,7 +125,7 @@ int main()
 	};
 
 	Shader triangleShader("../OmniProto/triangle.vert", "../OmniProto/triangle.frag");
-	Shader modelShader("../OmniProto/basicModel.vert", "../OmniProto/basicModel.frag");
+	Shader modelShader("../OmniProto/simpleFalloff.vert", "../OmniProto/simpleFalloff.frag");
 
 	unsigned int VBO, VAO;
 	glGenVertexArrays(1, &VAO);
@@ -145,15 +145,14 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 
-	glActiveTexture(GL_TEXTURE0);
-	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/awesomeface.png", "face");
-	glActiveTexture(GL_TEXTURE1);
-	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/container2.png", "container");
 	triangleShader.use();
 	triangleShader.setInt("texture1", 0);
 	triangleShader.setInt("texture2", 1);
 
-	Model nanoSuit("C:/Users/Nemanja/Desktop/OpenGLAssets/NanoSuit/nanosuit.obj");
+	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/awesomeface.png", "face");
+	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/container2.png", "container");
+	ResourceManager::loadModel("E:/Epski projekat dva tacka nula/OpenGLAssets/testModels/testSphere.obj", "nanoSuit");
+	ResourceManager::getModel("nanoSuit").getSpecs();
 	//================================================================================
 	//Main loop
 	//================================================================================
@@ -195,13 +194,14 @@ int main()
 
 		}
 		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
-		model = glm::scale(model, glm::vec3(.1f, .1f, .1f));
+		//model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
+		model = glm::scale(model, glm::vec3(.3f, .3f, .3f));
 		modelShader.use();
 		modelShader.setMat4("model", model);
 		modelShader.setMat4("view", view);
 		modelShader.setMat4("projection", projection);
-		nanoSuit.draw(modelShader);
+		modelShader.setFloat("time", glfwGetTime());
+		ResourceManager::getModel("nanoSuit").draw(modelShader);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();

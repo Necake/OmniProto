@@ -73,5 +73,11 @@
     <None Include="basicModel.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="simpleFalloff.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="simpleFalloff.frag">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

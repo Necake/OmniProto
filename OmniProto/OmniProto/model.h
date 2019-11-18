@@ -5,7 +5,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include "mesh.h"
-#include "ResourceManager.h"
+#include "Texture.h"
 
 class Model
 {
@@ -14,7 +14,12 @@ public:
 	{
 		loadModel(path);
 	}
+	Model()
+	{
+
+	}
 	void draw(Shader shader);
+	void getSpecs();
 private:
 	std::vector<TextureData> textures_loaded;
 	std::vector<Mesh> meshes;

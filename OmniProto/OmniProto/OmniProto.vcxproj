@@ -173,6 +173,8 @@
   <ItemGroup>
     <None Include="basicModel.frag" />
     <None Include="basicModel.vert" />
+    <None Include="simpleFalloff.frag" />
+    <None Include="simpleFalloff.vert" />
     <None Include="triangle.frag" />
     <None Include="triangle.vert" />
   </ItemGroup>
