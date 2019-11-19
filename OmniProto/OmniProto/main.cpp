@@ -158,6 +158,8 @@ int main()
 	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/container2.png", "container");
 	ResourceManager::loadModel("E:/Epski projekat dva tacka nula/OpenGLAssets/testModels/testSphere.obj", "nanoSuit");
 	ResourceManager::getModel("nanoSuit").getSpecs();
+	RayUtil::initAxes();
+
 	//================================================================================
 	//Main loop
 	//================================================================================
@@ -168,7 +170,7 @@ int main()
 		lastFrame = currentFrame;
 		processInput(window);
 
-		glClearColor(.1f, .4f, .4f, 1.0f);
+		glClearColor(.05f, 0.05f, .05f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		glm::mat4 view = glm::mat4(1.0f);
@@ -178,31 +180,8 @@ int main()
 		glm::mat4 model = glm::mat4(1.0f);
 
 		RayUtil::renderAxes(view, model, projection, rayShader);
-		/*
-		triangleShader.use();
-		triangleShader.setFloat("sizeX", sin(glfwGetTime()));
-		triangleShader.setMat4("view", view);
-		triangleShader.setMat4("projection", projection);
-
-		for (int i = 0; i < 10; i++)
-		{
-			glm::mat4 model = glm::mat4(1.0f);
-			model = glm::translate(model, cubePositions[i]);
-			model = glm::rotate(model, (float)glfwGetTime() + i, glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
-
-			triangleShader.setMat4("model", model);
-
-			glActiveTexture(GL_TEXTURE0);
-			ResourceManager::getTexture("face").bind();
-			glActiveTexture(GL_TEXTURE1);
-			ResourceManager::getTexture("container").bind();
-			glBindVertexArray(VAO);
-			glDrawArrays(GL_TRIANGLES, 0, 36);
-
-		}
-		*/
 		
-		//model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
+		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
 		model = glm::scale(model, glm::vec3(.3f, .3f, .3f));
 		modelShader.use();
 		modelShader.setMat4("model", model);
