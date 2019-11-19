@@ -13,6 +13,7 @@
 #include "camera.h"
 #include "model.h"
 #include "ResourceManager.h"
+#include "RayUtil.h"
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -26,6 +27,9 @@ Camera cam(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = windowWidth / 2.0f;
 float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
+
+float falloffRadius = 2.0f;
+glm::vec3 projectilePos(0.0f, 0.0f, 0.0f);
 
 int main()
 {
@@ -126,6 +130,7 @@ int main()
 
 	Shader triangleShader("../OmniProto/triangle.vert", "../OmniProto/triangle.frag");
 	Shader modelShader("../OmniProto/simpleFalloff.vert", "../OmniProto/simpleFalloff.frag");
+	Shader rayShader("../OmniProto/ray.vert", "../OmniProto/ray.frag");
 
 	unsigned int VBO, VAO;
 	glGenVertexArrays(1, &VAO);
@@ -165,17 +170,19 @@ int main()
 
 		glClearColor(.1f, .4f, .4f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+		
 		glm::mat4 view = glm::mat4(1.0f);
 		view = cam.GetViewMatrix();
 		glfwGetWindowSize(window, &windowWidth, &windowHeight);
 		glm::mat4 projection = glm::perspective(glm::radians(cam.Zoom), (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
+		glm::mat4 model = glm::mat4(1.0f);
 
+		RayUtil::renderAxes(view, model, projection, rayShader);
+		/*
 		triangleShader.use();
 		triangleShader.setFloat("sizeX", sin(glfwGetTime()));
 		triangleShader.setMat4("view", view);
 		triangleShader.setMat4("projection", projection);
-
 
 		for (int i = 0; i < 10; i++)
 		{
@@ -193,7 +200,8 @@ int main()
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		}
-		glm::mat4 model = glm::mat4(1.0f);
+		*/
+		
 		//model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
 		model = glm::scale(model, glm::vec3(.3f, .3f, .3f));
 		modelShader.use();
@@ -201,8 +209,11 @@ int main()
 		modelShader.setMat4("view", view);
 		modelShader.setMat4("projection", projection);
 		modelShader.setFloat("time", glfwGetTime());
-		ResourceManager::getModel("nanoSuit").draw(modelShader);
 
+		modelShader.setVec3("projectilePos", projectilePos);
+		modelShader.setFloat("radius", falloffRadius);
+
+		ResourceManager::getModel("nanoSuit").draw(modelShader);
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
@@ -257,4 +268,31 @@ void processInput(GLFWwindow* window)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	else if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	float resizeSpeed = camSpeed;
+	if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS)
+	{
+		falloffRadius += resizeSpeed;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS)
+	{
+		falloffRadius -= resizeSpeed;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+	{
+		projectilePos.y += resizeSpeed;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+	{
+		projectilePos.y -= resizeSpeed;
+	}
+	if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+	{
+		projectilePos.x += resizeSpeed;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+	{
+		projectilePos.x -= resizeSpeed;
+	}
 }

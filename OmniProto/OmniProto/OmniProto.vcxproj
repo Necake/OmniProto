@@ -165,6 +165,7 @@
     <ClInclude Include="camera.h" />
     <ClInclude Include="mesh.h" />
     <ClInclude Include="model.h" />
+    <ClInclude Include="RayUtil.h" />
     <ClInclude Include="ResourceManager.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="stb_image.h" />
@@ -173,6 +174,8 @@
   <ItemGroup>
     <None Include="basicModel.frag" />
     <None Include="basicModel.vert" />
+    <None Include="ray.frag" />
+    <None Include="ray.vert" />
     <None Include="simpleFalloff.frag" />
     <None Include="simpleFalloff.vert" />
     <None Include="triangle.frag" />

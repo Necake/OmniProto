@@ -59,6 +59,9 @@
     <ClInclude Include="Texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RayUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="triangle.vert">
@@ -77,6 +80,12 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="simpleFalloff.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="ray.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="ray.frag">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

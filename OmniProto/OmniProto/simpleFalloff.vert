@@ -9,11 +9,11 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-vec3 projectilePos = vec3(0,1.5,0);
+uniform vec3 projectilePos;// = vec3(0,1.5,0);
 vec3 projectileDir = vec3(0,-1,0); //normalized hopefully
 
 const float roughness = 3;
-const float radius = 3;
+uniform float radius;// = 3;
 uniform float time;
 float falloff(float dist);
 
