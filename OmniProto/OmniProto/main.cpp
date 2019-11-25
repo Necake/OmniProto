@@ -129,13 +129,14 @@ int main()
 	};
 	glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
-	Shader diffuseShader("../OmniProto/diffuse.vert", "../OmniProto/diffuse.frag");
+	Shader diffuseShader("../OmniProto/diffuse.vert", "../OmniProto/diffuse_tex.frag");
 	Shader unlitShader("../OmniProto/unlit.vert", "../OmniProto/unlit.frag");
 	Shader modelShader("../OmniProto/simpleFalloff.vert", "../OmniProto/simpleFalloff.frag");
 	Shader rayShader("../OmniProto/ray.vert", "../OmniProto/ray.frag");
 
 	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/awesomeface.png", "face");
 	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/container2.png", "container");
+	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/container2_specular.png", "containerSpecular");
 	ResourceManager::loadModel("E:/Epski projekat dva tacka nula/OpenGLAssets/testModels/testSphere.obj", "sphere");
 	ResourceManager::loadModel("E:/Epski projekat dva tacka nula/OpenGLAssets/testModels/testCube.obj", "light");
 	ResourceManager::getModel("sphere").getSpecs();
@@ -195,11 +196,22 @@ int main()
 		model = glm::scale(model, glm::vec3(.3f, .3f, .3f));
 		diffuseShader.setMat4("model", model);
 		diffuseShader.setMat4("view", view);
-		diffuseShader.setMat4("projection", projection);
-		diffuseShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
-		diffuseShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-		diffuseShader.setVec3("lightPos", lightPos);
+		diffuseShader.setMat4("projection", projection); 
+		diffuseShader.setVec3("material.ambient", 0.34f, 1.0f, 0.75f);
+		diffuseShader.setVec3("material.diffuse", 1.0f, 0.34f, 0.95f);
+		diffuseShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+		diffuseShader.setFloat("material.shininess", 32.0f);
+		diffuseShader.setVec3("light.position", lightPos);
+		diffuseShader.setVec3("light.ambient", 0.4f, 0.4f, 0.4f);
+		diffuseShader.setVec3("light.diffuse", 0.8f, 0.8f, 0.8f);
+		diffuseShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 		diffuseShader.setVec3("viewPos", cam.Position);
+		diffuseShader.setInt("material.texture_diffuse1", 0);
+		diffuseShader.setInt("material.texture_specular1", 1);
+		glActiveTexture(GL_TEXTURE0);
+		ResourceManager::getTexture("container").bind();
+		glActiveTexture(GL_TEXTURE1);
+		ResourceManager::getTexture("containerSpecular").bind();
 		ResourceManager::getModel("sphere").draw(diffuseShader);
 
 		rayShader.use();

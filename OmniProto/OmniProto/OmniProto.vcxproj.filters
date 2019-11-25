@@ -106,5 +106,8 @@
     <None Include="diffuse.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="diffuse_tex.frag">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

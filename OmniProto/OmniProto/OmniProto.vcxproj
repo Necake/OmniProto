@@ -178,6 +178,10 @@
     <None Include="basicModel.vert" />
     <None Include="diffuse.frag" />
     <None Include="diffuse.vert" />
+    <None Include="diffuse_tex.frag">
+      <SubType>
+      </SubType>
+    </None>
     <None Include="ray.frag" />
     <None Include="ray.vert" />
     <None Include="simpleFalloff.frag" />
