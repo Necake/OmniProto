@@ -176,12 +176,22 @@
   <ItemGroup>
     <None Include="basicModel.frag" />
     <None Include="basicModel.vert" />
+    <None Include="diffuse.frag" />
+    <None Include="diffuse.vert" />
     <None Include="ray.frag" />
     <None Include="ray.vert" />
     <None Include="simpleFalloff.frag" />
     <None Include="simpleFalloff.vert" />
     <None Include="triangle.frag" />
     <None Include="triangle.vert" />
+    <None Include="unlit.frag">
+      <SubType>
+      </SubType>
+    </None>
+    <None Include="unlit.vert">
+      <SubType>
+      </SubType>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

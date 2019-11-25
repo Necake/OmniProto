@@ -127,38 +127,21 @@ int main()
 		glm::vec3(1.5f,  0.2f, -1.5f),
 		glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
+	glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
-	Shader triangleShader("../OmniProto/triangle.vert", "../OmniProto/triangle.frag");
+	Shader diffuseShader("../OmniProto/diffuse.vert", "../OmniProto/diffuse.frag");
+	Shader unlitShader("../OmniProto/unlit.vert", "../OmniProto/unlit.frag");
 	Shader modelShader("../OmniProto/simpleFalloff.vert", "../OmniProto/simpleFalloff.frag");
 	Shader rayShader("../OmniProto/ray.vert", "../OmniProto/ray.frag");
 
-	unsigned int VBO, VAO;
-	glGenVertexArrays(1, &VAO);
-	glBindVertexArray(VAO);
-
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-	//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	//glEnableVertexAttribArray(1);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(2);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-
-	triangleShader.use();
-	triangleShader.setInt("texture1", 0);
-	triangleShader.setInt("texture2", 1);
-
 	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/awesomeface.png", "face");
 	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/container2.png", "container");
-	ResourceManager::loadModel("E:/Epski projekat dva tacka nula/OpenGLAssets/testModels/testSphere.obj", "nanoSuit");
-	ResourceManager::getModel("nanoSuit").getSpecs();
+	ResourceManager::loadModel("E:/Epski projekat dva tacka nula/OpenGLAssets/testModels/testSphere.obj", "sphere");
+	ResourceManager::loadModel("E:/Epski projekat dva tacka nula/OpenGLAssets/testModels/testCube.obj", "light");
+	ResourceManager::getModel("sphere").getSpecs();
+	ResourceManager::getModel("light").getSpecs();
 	RayUtil::initAxes();
+	Ray projectileRay(glm::vec3(0, 0, 0), glm::vec3(0, -0.01, 0), glm::vec3(1, 1, 1));
 
 	//================================================================================
 	//Main loop
@@ -187,12 +170,44 @@ int main()
 		modelShader.setMat4("model", model);
 		modelShader.setMat4("view", view);
 		modelShader.setMat4("projection", projection);
-		modelShader.setFloat("time", glfwGetTime());
-
 		modelShader.setVec3("projectilePos", projectilePos);
+		modelShader.setFloat("time", glfwGetTime());
 		modelShader.setFloat("radius", falloffRadius);
+		modelShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
+		modelShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+		modelShader.setVec3("lightPos", lightPos);
+		modelShader.setVec3("viewPos", cam.Position);
+		ResourceManager::getModel("sphere").draw(modelShader);
 
-		ResourceManager::getModel("nanoSuit").draw(modelShader);
+		unlitShader.use();
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, lightPos);
+		model = glm::scale(model, glm::vec3(.1f, .1f, .1f));
+		unlitShader.setMat4("model", model);
+		unlitShader.setMat4("view", view);
+		unlitShader.setMat4("projection", projection);
+		ResourceManager::getModel("light").draw(unlitShader);
+
+		diffuseShader.use();
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(2, 0, 0));
+		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
+		model = glm::scale(model, glm::vec3(.3f, .3f, .3f));
+		diffuseShader.setMat4("model", model);
+		diffuseShader.setMat4("view", view);
+		diffuseShader.setMat4("projection", projection);
+		diffuseShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
+		diffuseShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+		diffuseShader.setVec3("lightPos", lightPos);
+		diffuseShader.setVec3("viewPos", cam.Position);
+		ResourceManager::getModel("sphere").draw(diffuseShader);
+
+		rayShader.use();
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, projectilePos);
+		rayShader.setMat4("model", model);
+		projectileRay.draw(rayShader);
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
