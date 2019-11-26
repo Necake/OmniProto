@@ -40,8 +40,9 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "bottom text", NULL, NULL);
+	windowWidth = glfwGetVideoMode(glfwGetPrimaryMonitor())->width;
+	windowHeight = glfwGetVideoMode(glfwGetPrimaryMonitor())->height;
+	GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "bottom text", glfwGetPrimaryMonitor(), NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create window!" << std::endl;
@@ -201,10 +202,27 @@ int main()
 		diffuseShader.setVec3("material.diffuse", 1.0f, 0.34f, 0.95f);
 		diffuseShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
 		diffuseShader.setFloat("material.shininess", 32.0f);
-		diffuseShader.setVec3("light.position", lightPos);
-		diffuseShader.setVec3("light.ambient", 0.4f, 0.4f, 0.4f);
-		diffuseShader.setVec3("light.diffuse", 0.8f, 0.8f, 0.8f);
-		diffuseShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+		diffuseShader.setVec3("pointLight.position", lightPos);
+		diffuseShader.setVec3("pointLight.ambient", 0.4f, 0.4f, 0.4f);
+		diffuseShader.setVec3("pointLight.diffuse", 0.8f, 0.8f, 0.8f);
+		diffuseShader.setVec3("pointLight.specular", 1.0f, 1.0f, 1.0f);
+		diffuseShader.setFloat("pointLight.constant", 1.0f);
+		diffuseShader.setFloat("pointLight.linear", 0.09f);
+		diffuseShader.setFloat("pointLight.quadratic", 0.032f);
+		diffuseShader.setVec3("dirLight.direction", 1.0f, 1.0f, 0);
+		diffuseShader.setVec3("dirLight.ambient", 0.2f, 0.1f, 0.05f);
+		diffuseShader.setVec3("dirLight.diffuse", 0.4f, 0.2f, 0.1f);
+		diffuseShader.setVec3("dirLight.specular", 1.0f, 0.8f, 0.5f);
+		diffuseShader.setVec3("flashLight.position", cam.Position);
+		diffuseShader.setVec3("flashLight.direction", cam.Front);
+		diffuseShader.setFloat("flashLight.cutoff", glm::cos(glm::radians(12.5f)));
+		diffuseShader.setFloat("flashLight.outerCutoff", glm::cos(glm::radians(17.5f)));
+		diffuseShader.setFloat("flashLight.constant", 1.0f);
+		diffuseShader.setFloat("flashLight.linear", 0.09f);
+		diffuseShader.setFloat("flashLight.quadratic", 0.032f);
+		diffuseShader.setVec3("flashLight.ambient", 0, 0, 0);
+		diffuseShader.setVec3("flashLight.diffuse", 0.8f, 0.8f, 0.8f);
+		diffuseShader.setVec3("flashLight.specular", 1.0f, 1.0f, 1.0f);
 		diffuseShader.setVec3("viewPos", cam.Position);
 		diffuseShader.setInt("material.texture_diffuse1", 0);
 		diffuseShader.setInt("material.texture_specular1", 1);
@@ -213,6 +231,11 @@ int main()
 		glActiveTexture(GL_TEXTURE1);
 		ResourceManager::getTexture("containerSpecular").bind();
 		ResourceManager::getModel("sphere").draw(diffuseShader);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(20,0,0));
+		diffuseShader.setMat4("model", model);
+		ResourceManager::getModel("sphere").draw(diffuseShader);
+
 
 		rayShader.use();
 		model = glm::mat4(1.0f);
