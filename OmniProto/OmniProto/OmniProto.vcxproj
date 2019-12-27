@@ -72,8 +72,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\G part\Dev\_Lib\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\G part\Dev\_Lib\Lib\freetype;D:\G part\Dev\_Lib\Lib\assimp5;D:\G part\Dev\_Lib\Lib\lib-vc2015;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\Nemanja\Documents\_Dev\_Lib\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\Nemanja\Documents\_Dev\_Lib\Lib\freetype;C:\Users\Nemanja\Documents\_Dev\_Lib\Lib\assimp5;C:\Users\Nemanja\Documents\_Dev\_Lib\Lib\lib-vc2015;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -186,6 +186,8 @@
     <None Include="ray.vert" />
     <None Include="simpleFalloff.frag" />
     <None Include="simpleFalloff.vert" />
+    <None Include="skybox.frag" />
+    <None Include="skybox.vert" />
     <None Include="triangle.frag" />
     <None Include="triangle.vert" />
     <None Include="unlit.frag">

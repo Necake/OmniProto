@@ -13,6 +13,7 @@ public:
 	unsigned int wrapS, wrapT, filterMin, filterMax;
 	Texture(const char* path);
 	Texture();
+	static int createSkybox(const char* [6]);
 	void bind() const;
 	unsigned int generateModelTexture(const char* path, const std::string& directory, bool gamma);
 private:

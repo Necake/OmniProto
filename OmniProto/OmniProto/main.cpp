@@ -26,10 +26,15 @@ float deltaTime = 0, lastFrame = 0.0f;
 Camera cam(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = windowWidth / 2.0f;
 float lastY = windowHeight / 2.0f;
-bool firstMouse = true;
+bool firstMouse = true, isWireframe = false;
 
 float falloffRadius = 2.0f;
 glm::vec3 projectilePos(0.0f, 0.0f, 0.0f);
+
+extern "C"
+{
+	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
 
 int main()
 {
@@ -42,7 +47,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	windowWidth = glfwGetVideoMode(glfwGetPrimaryMonitor())->width;
 	windowHeight = glfwGetVideoMode(glfwGetPrimaryMonitor())->height;
-	GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "bottom text", glfwGetPrimaryMonitor(), NULL);
+	GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "bottom text", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create window!" << std::endl;
@@ -68,52 +73,54 @@ int main()
 	glCullFace(GL_BACK); //tell opengl to cull back faces
 	glFrontFace(GL_CCW); //set the front faces to be counter-clockwise winded
 
+	glLineWidth(2.5);
+
 	//================================================================================
 	//Geometry setup
 	//================================================================================
-	float vertices[] = {
-	// Back face
-   -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // Bottom-left
-	0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
-	0.5f, -0.5f, -0.5f,  1.0f, 0.0f, // bottom-right         
-	0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
-   -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // bottom-left
-   -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
-   // Front face
-   -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
-	0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
-	0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
-	0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
-   -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, // top-left
-   -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
-   // Left face
-   -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
-   -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-left
-   -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
-   -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
-   -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
-   -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
-   // Right face
-	0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
-	0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
-	0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right         
-	0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
-	0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
-	0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left     
-   // Bottom face
-   -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
-	0.5f, -0.5f, -0.5f,  1.0f, 1.0f, // top-left
-	0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
-	0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
-   -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
-   -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
-   // Top face
-   -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
-	0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
-	0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right     
-	0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
-   -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
-   -0.5f,  0.5f,  0.5f,  0.0f, 0.0f  // bottom-left   
+	float skyboxVertices[] = {
+		// positions          
+		-1.0f,  1.0f, -1.0f,
+		-1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+
+		-1.0f, -1.0f,  1.0f,
+		-1.0f, -1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f,  1.0f,
+		-1.0f, -1.0f,  1.0f,
+
+		 1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+
+		-1.0f, -1.0f,  1.0f,
+		-1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f, -1.0f,  1.0f,
+		-1.0f, -1.0f,  1.0f,
+
+		-1.0f,  1.0f, -1.0f,
+		 1.0f,  1.0f, -1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		-1.0f,  1.0f,  1.0f,
+		-1.0f,  1.0f, -1.0f,
+
+		-1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f,  1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f,  1.0f,
+		 1.0f, -1.0f,  1.0f
 	};
 
 	glm::vec3 cubePositions[] = {
@@ -134,17 +141,36 @@ int main()
 	Shader unlitShader("../OmniProto/unlit.vert", "../OmniProto/unlit.frag");
 	Shader modelShader("../OmniProto/simpleFalloff.vert", "../OmniProto/simpleFalloff.frag");
 	Shader rayShader("../OmniProto/ray.vert", "../OmniProto/ray.frag");
-
-	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/awesomeface.png", "face");
-	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/container2.png", "container");
-	ResourceManager::loadTexture("C:/Users/Nemanja/Desktop/OpenGLAssets/container2_specular.png", "containerSpecular");
-	ResourceManager::loadModel("E:/Epski projekat dva tacka nula/OpenGLAssets/testModels/testSphere.obj", "sphere");
-	ResourceManager::loadModel("E:/Epski projekat dva tacka nula/OpenGLAssets/testModels/testCube.obj", "light");
+	Shader skyboxShader("../OmniProto/skybox.vert", "../OmniProto/skybox.frag");
+	ResourceManager::loadTexture("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/awesomeface.png", "face");
+	ResourceManager::loadTexture("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/container2.png", "container");
+	ResourceManager::loadTexture("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/container2_specular.png", "containerSpecular");
+	const char* skyboxTextures[6] = {
+		"C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Skybox/right.png",
+		"C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Skybox/left.png",
+		"C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Skybox/top.png",
+		"C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Skybox/bot.png",
+		"C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Skybox/front.png",
+		"C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Skybox/back.png"
+	};
+	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/sphere.obj", "sphere");
+	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/sphere.obj", "light");
 	ResourceManager::getModel("sphere").getSpecs();
 	ResourceManager::getModel("light").getSpecs();
 	RayUtil::initAxes();
 	Ray projectileRay(glm::vec3(0, 0, 0), glm::vec3(0, -0.01, 0), glm::vec3(1, 1, 1));
 
+	
+	unsigned int skyboxVAO, skyboxVBO;
+	glGenVertexArrays(1, &skyboxVAO);
+	glGenBuffers(1, &skyboxVBO);
+	glBindVertexArray(skyboxVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+	unsigned int cubemap = Texture::createSkybox(skyboxTextures);
 	//================================================================================
 	//Main loop
 	//================================================================================
@@ -157,7 +183,8 @@ int main()
 
 		glClearColor(.05f, 0.05f, .05f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
+
+
 		glm::mat4 view = glm::mat4(1.0f);
 		view = cam.GetViewMatrix();
 		glfwGetWindowSize(window, &windowWidth, &windowHeight);
@@ -165,9 +192,10 @@ int main()
 		glm::mat4 model = glm::mat4(1.0f);
 
 		RayUtil::renderAxes(view, model, projection, rayShader);
-		
+		if (isWireframe)
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
-		model = glm::scale(model, glm::vec3(.3f, .3f, .3f));
+		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
 		modelShader.use();
 		modelShader.setMat4("model", model);
 		modelShader.setMat4("view", view);
@@ -184,7 +212,7 @@ int main()
 		unlitShader.use();
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, lightPos);
-		model = glm::scale(model, glm::vec3(.1f, .1f, .1f));
+		model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
 		unlitShader.setMat4("model", model);
 		unlitShader.setMat4("view", view);
 		unlitShader.setMat4("projection", projection);
@@ -194,7 +222,7 @@ int main()
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(2, 0, 0));
 		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
-		model = glm::scale(model, glm::vec3(.3f, .3f, .3f));
+		model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
 		diffuseShader.setMat4("model", model);
 		diffuseShader.setMat4("view", view);
 		diffuseShader.setMat4("projection", projection); 
@@ -233,7 +261,11 @@ int main()
 		ResourceManager::getModel("sphere").draw(diffuseShader);
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(20,0,0));
+		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
 		diffuseShader.setMat4("model", model);
+		diffuseShader.setInt("skybox", 4);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
 		ResourceManager::getModel("sphere").draw(diffuseShader);
 
 
@@ -242,6 +274,22 @@ int main()
 		model = glm::translate(model, projectilePos);
 		rayShader.setMat4("model", model);
 		projectileRay.draw(rayShader);
+
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
+
+		glDepthMask(false);
+		skyboxShader.use();
+		skyboxShader.setMat4("view", glm::mat4(glm::mat3(cam.GetViewMatrix())));
+		skyboxShader.setMat4("projection", projection);
+		glBindVertexArray(skyboxVAO);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glDepthMask(true);
+
+		glDepthFunc(GL_LESS);
+
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -294,9 +342,9 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		cam.ProcessKeyboard(RIGHT, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		isWireframe = true;
 	else if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		isWireframe = false;
 
 	float resizeSpeed = camSpeed;
 	if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS)

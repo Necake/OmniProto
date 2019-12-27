@@ -52,7 +52,35 @@ void Texture::bind() const
 	glBindTexture(GL_TEXTURE_2D, ID);
 }
 
+int Texture::createSkybox(const char* paths[6])
+{
+	stbi_set_flip_vertically_on_load(false);
+	unsigned int cubeMapID;
+	glGenTextures(1, &cubeMapID);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapID);
 
+	int width, height, nrChans;
+	for (int i = 0; i < 6; i++)
+	{
+		unsigned char* data = stbi_load(paths[i], &width, &height, &nrChans, 0);
+		if (data)
+		{
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+			stbi_image_free(data);
+		}
+		else
+		{
+			std::cout << "Failed to load cubemap!\n";
+			stbi_image_free(data);
+		}
+	}
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	return cubeMapID;
+}
 
 unsigned int Texture::generateModelTexture(const char* path, const std::string& directory, bool gamma)
 {

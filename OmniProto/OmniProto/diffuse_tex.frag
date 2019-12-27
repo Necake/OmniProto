@@ -51,6 +51,7 @@ uniform PointLight pointLight;
 uniform DirectionalLight dirLight;
 uniform FlashLight flashLight;
 uniform vec3 viewPos;
+uniform samplerCube skybox;
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 vec3 CalcDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDir);
@@ -63,7 +64,10 @@ void main()
 	vec3 result = CalcDirectionalLight(dirLight, norm, viewDir);
 	result += CalcPointLight(pointLight, norm, FragPos, viewDir);
 	result += CalcFlashLight(flashLight, norm, FragPos, viewDir);
-    FragColor = vec4(result, 1.0);
+
+    vec3 r = reflect(viewDir, norm);
+
+    FragColor = vec4(mix(result, texture(skybox, r).rgb, 0.5), 1.0);
 }
 
 vec3 CalcDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDir)
