@@ -14,6 +14,7 @@
 #include "model.h"
 #include "ResourceManager.h"
 #include "RayUtil.h"
+#include "Cubemap.h"
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -142,6 +143,7 @@ int main()
 	Shader modelShader("../OmniProto/simpleFalloff.vert", "../OmniProto/simpleFalloff.frag");
 	Shader rayShader("../OmniProto/ray.vert", "../OmniProto/ray.frag");
 	Shader skyboxShader("../OmniProto/skybox.vert", "../OmniProto/skybox.frag");
+	Shader geomTestShader("../OmniProto/deleteMe.vert", "../OmniProto/deleteMe.frag", "../OmniProto/deleteMe.geom");
 	ResourceManager::loadTexture("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/awesomeface.png", "face");
 	ResourceManager::loadTexture("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/container2.png", "container");
 	ResourceManager::loadTexture("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/container2_specular.png", "containerSpecular");
@@ -170,7 +172,26 @@ int main()
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
-	unsigned int cubemap = Texture::createSkybox(skyboxTextures);
+	Cubemap skybox(skyboxTextures);
+
+	float points[] = {
+	-0.5f,  0.5f, 1.0f, 0.0f, 0.0f, // top-left
+	 0.5f,  0.5f, 0.0f, 1.0f, 0.0f, // top-right
+	 0.5f, -0.5f, 0.0f, 0.0f, 1.0f, // bottom-right
+	-0.5f, -0.5f, 1.0f, 1.0f, 0.0f  // bottom-left
+	};
+
+	unsigned int planeVAO, planeVBO;
+	glGenVertexArrays(1, &planeVAO);
+	glGenBuffers(1, &planeVBO);
+	glBindVertexArray(planeVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
+
 	//================================================================================
 	//Main loop
 	//================================================================================
@@ -265,7 +286,7 @@ int main()
 		diffuseShader.setMat4("model", model);
 		diffuseShader.setInt("skybox", 4);
 		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+		skybox.bind();
 		ResourceManager::getModel("sphere").draw(diffuseShader);
 
 
@@ -275,16 +296,19 @@ int main()
 		rayShader.setMat4("model", model);
 		projectileRay.draw(rayShader);
 
+		geomTestShader.use();
+		glBindVertexArray(planeVAO);
+		glDrawArrays(GL_POINTS, 0, 4);
 
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
+		glDepthFunc(GL_LEQUAL);
 
 		glDepthMask(false);
 		skyboxShader.use();
 		skyboxShader.setMat4("view", glm::mat4(glm::mat3(cam.GetViewMatrix())));
 		skyboxShader.setMat4("projection", projection);
 		glBindVertexArray(skyboxVAO);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+		skybox.bind();
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 		glDepthMask(true);
 

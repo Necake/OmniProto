@@ -1,7 +1,6 @@
 #include "Texture.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "ImageLoader.h"
 
 Texture::Texture(const char* path) : width(0), height(0), internalFormat(GL_RGBA), imageFormat(GL_RGBA),
 wrapS(GL_CLAMP_TO_EDGE), wrapT(GL_CLAMP_TO_EDGE), filterMin(GL_LINEAR_MIPMAP_LINEAR), filterMax(GL_LINEAR)
@@ -17,14 +16,14 @@ wrapS(GL_CLAMP_TO_EDGE), wrapT(GL_CLAMP_TO_EDGE), filterMin(GL_LINEAR_MIPMAP_LIN
 
 void Texture::generate(const char* path)
 {
-	stbi_set_flip_vertically_on_load(true);
 	glBindTexture(GL_TEXTURE_2D, ID);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapS);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filterMin);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filterMax);
 	int width, height, nrChans;
-	unsigned char* texData = stbi_load(path, &width, &height, &nrChans, 0);
+	ImageLoader::flipVertical = true;
+	unsigned char* texData = ImageLoader::loadImage(path, &width, &height, &nrChans);
 	if (texData)
 	{
 		if (nrChans == 3)
@@ -44,17 +43,17 @@ void Texture::generate(const char* path)
 	{
 		std::cout << "Failed to load texture" << std::endl;
 	}
-	stbi_image_free(texData);
+	ImageLoader::freeImage(texData);
 }
 
 void Texture::bind() const
 {
 	glBindTexture(GL_TEXTURE_2D, ID);
 }
-
+/*
 int Texture::createSkybox(const char* paths[6])
 {
-	stbi_set_flip_vertically_on_load(false);
+	ImageLoader::flipVertical = false;
 	unsigned int cubeMapID;
 	glGenTextures(1, &cubeMapID);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapID);
@@ -62,16 +61,16 @@ int Texture::createSkybox(const char* paths[6])
 	int width, height, nrChans;
 	for (int i = 0; i < 6; i++)
 	{
-		unsigned char* data = stbi_load(paths[i], &width, &height, &nrChans, 0);
+		unsigned char* data = ImageLoader::loadImage(paths[i], &width, &height, &nrChans);
 		if (data)
 		{
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-			stbi_image_free(data);
+			ImageLoader::freeImage(data);
 		}
 		else
 		{
 			std::cout << "Failed to load cubemap!\n";
-			stbi_image_free(data);
+			ImageLoader::freeImage(data);
 		}
 	}
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -81,7 +80,7 @@ int Texture::createSkybox(const char* paths[6])
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	return cubeMapID;
 }
-
+*/
 unsigned int Texture::generateModelTexture(const char* path, const std::string& directory, bool gamma)
 {
 	std::string filename = std::string(path);
@@ -91,7 +90,7 @@ unsigned int Texture::generateModelTexture(const char* path, const std::string& 
 	glGenTextures(1, &textureID);
 
 	int width, height, nrComponents;
-	unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
+	unsigned char* data = ImageLoader::loadImage(filename.c_str(), &width, &height, &nrComponents);
 	if (data)
 	{
 		GLenum format;
@@ -111,12 +110,12 @@ unsigned int Texture::generateModelTexture(const char* path, const std::string& 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		stbi_image_free(data);
+		ImageLoader::freeImage(data);
 	}
 	else
 	{
 		std::cout << "Texture failed to load at path: " << path << std::endl;
-		stbi_image_free(data);
+		ImageLoader::freeImage(data);
 	}
 
 	return textureID;
