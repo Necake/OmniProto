@@ -1,3 +1,10 @@
+//========================================================================================
+//main.cpp - Main entry point for the program, contains the main loop in which
+// all objects are rendered 
+//
+// Nemanja Milanovic, 2020 / neca1mesto@gmail.com / github.com/Necake
+//========================================================================================
+
 #include<GLAD\glad.h>
 #include<GLFW\glfw3.h>
 #include<glm\glm.hpp>
@@ -16,24 +23,26 @@
 #include "RayUtil.h"
 #include "Cubemap.h"
 
+//Function prototypes
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 
+//Program-wide constants
 int windowWidth = 800; int windowHeight = 800;
 float deltaTime = 0, lastFrame = 0.0f;
-
+//Camera-related constants
 Camera cam(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = windowWidth / 2.0f;
 float lastY = windowHeight / 2.0f;
 bool firstMouse = true, isWireframe = false;
-
+//Falloff related constants (see simpleFalloff shader)
 float falloffRadius = 2.0f;
 glm::vec3 projectilePos(0.0f, 0.0f, 0.0f);
 
 extern "C"
-{
+{ //Use the discrete GPU instead of the onboard GPU (AMD only, for NVidia see http://developer.download.nvidia.com/devzone/devcenter/gamegraphics/files/OptimusRenderingPolicies.pdf)
 	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
 
@@ -42,19 +51,19 @@ int main()
 	//================================================================================
 	//Init
 	//================================================================================
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwInit(); //Initialize glfw
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); //Set OpenGL version and core profile
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	windowWidth = glfwGetVideoMode(glfwGetPrimaryMonitor())->width;
+	windowWidth = glfwGetVideoMode(glfwGetPrimaryMonitor())->width; //Get window size
 	windowHeight = glfwGetVideoMode(glfwGetPrimaryMonitor())->height;
-	GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "bottom text", NULL, NULL);
-	if (window == NULL)
+	GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "O M N I", NULL, NULL); //Create window
+	if (window == NULL) //Fail check
 	{
 		std::cout << "Failed to create window!" << std::endl;
 		return -1;
 	}
-	glfwMakeContextCurrent(window);
+	glfwMakeContextCurrent(window); //Render to current window
 
 	//Loading opengl func pointers
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -62,23 +71,26 @@ int main()
 		std::cout << "Failed to initialize GLAD!" << std::endl;
 		return -1;
 	}
-
-	glViewport(0, 0, windowWidth, windowHeight);
+	glViewport(0, 0, windowWidth, windowHeight); //Set gl viewport to according window size
+	
+	//Callback setup
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK); //tell opengl to cull back faces
-	glFrontFace(GL_CCW); //set the front faces to be counter-clockwise winded
-
-	glLineWidth(2.5);
+	glEnable(GL_DEPTH_TEST); //Enable depth testing
+	glEnable(GL_CULL_FACE); //Enable face culling
+	glCullFace(GL_BACK); //Tell opengl to cull back faces
+	glFrontFace(GL_CCW); //Set the front faces to be counter-clockwise winded
+	glEnable(GL_BLEND); //Enable alpha blending
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //Set according blend mode
+	glLineWidth(2.5); //Set wireframe line width a bit thicker than normal
 
 	//================================================================================
 	//Geometry setup
 	//================================================================================
+	//Vertices for the skybox
 	float skyboxVertices[] = {
 		// positions          
 		-1.0f,  1.0f, -1.0f,
@@ -123,31 +135,19 @@ int main()
 		-1.0f, -1.0f,  1.0f,
 		 1.0f, -1.0f,  1.0f
 	};
+	glm::vec3 lightPos(1.2f, 1.0f, 2.0f); //Position of the point light (represented by the light bulb)
 
-	glm::vec3 cubePositions[] = {
-		glm::vec3(0.0f,  0.0f,  0.0f),
-		glm::vec3(2.0f,  5.0f, -15.0f),
-		glm::vec3(-1.5f, -2.2f, -2.5f),
-		glm::vec3(-3.8f, -2.0f, -12.3f),
-		glm::vec3(2.4f, -0.4f, -3.5f),
-		glm::vec3(-1.7f,  3.0f, -7.5f),
-		glm::vec3(1.3f, -2.0f, -2.5f),
-		glm::vec3(1.5f,  2.0f, -2.5f),
-		glm::vec3(1.5f,  0.2f, -1.5f),
-		glm::vec3(-1.3f,  1.0f, -1.5f)
-	};
-	glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
-
+	//Loading and compiling shaders (TODO: move to resource manager)
 	Shader diffuseShader("../OmniProto/diffuse.vert", "../OmniProto/diffuse_tex.frag");
 	Shader unlitShader("../OmniProto/unlit.vert", "../OmniProto/unlit.frag");
 	Shader modelShader("../OmniProto/simpleFalloff.vert", "../OmniProto/simpleFalloff.frag");
 	Shader rayShader("../OmniProto/ray.vert", "../OmniProto/ray.frag");
 	Shader skyboxShader("../OmniProto/skybox.vert", "../OmniProto/skybox.frag");
-	Shader geomTestShader("../OmniProto/deleteMe.vert", "../OmniProto/deleteMe.frag", "../OmniProto/deleteMe.geom");
+	//Loading textures
 	ResourceManager::loadTexture("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/awesomeface.png", "face");
 	ResourceManager::loadTexture("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/container2.png", "container");
 	ResourceManager::loadTexture("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/container2_specular.png", "containerSpecular");
-	const char* skyboxTextures[6] = {
+	const char* skyboxTextures[6] = { //Skybox textures for cubemap setup
 		"C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Skybox/right.png",
 		"C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Skybox/left.png",
 		"C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Skybox/top.png",
@@ -155,14 +155,16 @@ int main()
 		"C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Skybox/front.png",
 		"C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Skybox/back.png"
 	};
-	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/sphere.obj", "sphere");
-	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/sphere.obj", "light");
+	Cubemap skybox(skyboxTextures);
+	//Loading models and logging their sizes
+	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/sphereMapped.obj", "sphere");
+	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/bulb.obj", "light");
 	ResourceManager::getModel("sphere").getSpecs();
 	ResourceManager::getModel("light").getSpecs();
-	RayUtil::initAxes();
-	Ray projectileRay(glm::vec3(0, 0, 0), glm::vec3(0, -0.01, 0), glm::vec3(1, 1, 1));
+	RayUtil::initAxes(); //Allocating memory and initializing axis rays
+	Ray projectileRay(glm::vec3(0, 0, 0), glm::vec3(0, -0.01, 0), glm::vec3(1, 1, 1)); //Projectile ray for affecting falloff (see simpleFalloff shader)
 
-	
+	//VAO and VBO for the skybox
 	unsigned int skyboxVAO, skyboxVBO;
 	glGenVertexArrays(1, &skyboxVAO);
 	glGenBuffers(1, &skyboxVBO);
@@ -172,8 +174,7 @@ int main()
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
-	Cubemap skybox(skyboxTextures);
-
+	/* geometry shader testing, will probably delete soon
 	float points[] = {
 	-0.5f,  0.5f, 1.0f, 0.0f, 0.0f, // top-left
 	 0.5f,  0.5f, 0.0f, 1.0f, 0.0f, // top-right
@@ -191,6 +192,25 @@ int main()
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
+	*/
+	//Binding shader uniform blocks to the index of the matrices (0)
+	glUniformBlockBinding(diffuseShader.ID, glGetUniformBlockIndex(diffuseShader.ID, "Matrices"), 0);
+	glUniformBlockBinding(unlitShader.ID, glGetUniformBlockIndex(unlitShader.ID, "Matrices"), 0);
+	glUniformBlockBinding(modelShader.ID, glGetUniformBlockIndex(modelShader.ID, "Matrices"), 0);
+	glUniformBlockBinding(rayShader.ID, glGetUniformBlockIndex(rayShader.ID, "Matrices"), 0);
+	//Init uniform buffer that holds the projection and view matrix (shared across multiple shaders)
+	unsigned int UBOMatrices;
+	glGenBuffers(1, &UBOMatrices);
+	glBindBuffer(GL_UNIFORM_BUFFER, UBOMatrices);
+	glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBOMatrices, 0, 2 * sizeof(glm::mat4));
+	//Filling the first half of the uniform buffer with the projection matrix
+	glfwGetWindowSize(window, &windowWidth, &windowHeight);
+	glm::mat4 projection = glm::perspective(glm::radians(cam.Zoom), (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
+	glBindBuffer(GL_UNIFORM_BUFFER, UBOMatrices);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projection));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	//================================================================================
 	//Main loop
@@ -205,22 +225,25 @@ int main()
 		glClearColor(.05f, 0.05f, .05f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
+		//Filling the second half of the uniform buffer with the view matrix
 		glm::mat4 view = glm::mat4(1.0f);
 		view = cam.GetViewMatrix();
-		glfwGetWindowSize(window, &windowWidth, &windowHeight);
-		glm::mat4 projection = glm::perspective(glm::radians(cam.Zoom), (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
-		glm::mat4 model = glm::mat4(1.0f);
+		glBindBuffer(GL_UNIFORM_BUFFER, UBOMatrices);
+		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(view));
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-		RayUtil::renderAxes(view, model, projection, rayShader);
+		//render XYZ axes
+		glm::mat4 model = glm::mat4(1.0f);
+		RayUtil::renderAxes(model, rayShader);
+
 		if (isWireframe)
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Draw everything in wireframe from this point if told so (see processInput)
+		
+		//Render deformable model
+		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f))); //model matrix setup, rotation changes based on time
 		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
-		modelShader.use();
+		modelShader.use(); //Shader calls
 		modelShader.setMat4("model", model);
-		modelShader.setMat4("view", view);
-		modelShader.setMat4("projection", projection);
 		modelShader.setVec3("projectilePos", projectilePos);
 		modelShader.setFloat("time", glfwGetTime());
 		modelShader.setFloat("radius", falloffRadius);
@@ -228,25 +251,15 @@ int main()
 		modelShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
 		modelShader.setVec3("lightPos", lightPos);
 		modelShader.setVec3("viewPos", cam.Position);
-		ResourceManager::getModel("sphere").draw(modelShader);
+		ResourceManager::getModel("sphere").draw(modelShader); //Render with appropriate shader
 
-		unlitShader.use();
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, lightPos);
-		model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
-		unlitShader.setMat4("model", model);
-		unlitShader.setMat4("view", view);
-		unlitShader.setMat4("projection", projection);
-		ResourceManager::getModel("light").draw(unlitShader);
-
+		//Render the two textured spheres, same idea as above, just with more light-related shader calls (see diffuse / diffuse_tex shader)
 		diffuseShader.use();
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(2, 0, 0));
 		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
 		model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
 		diffuseShader.setMat4("model", model);
-		diffuseShader.setMat4("view", view);
-		diffuseShader.setMat4("projection", projection); 
 		diffuseShader.setVec3("material.ambient", 0.34f, 1.0f, 0.75f);
 		diffuseShader.setVec3("material.diffuse", 1.0f, 0.34f, 0.95f);
 		diffuseShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
@@ -275,7 +288,7 @@ int main()
 		diffuseShader.setVec3("viewPos", cam.Position);
 		diffuseShader.setInt("material.texture_diffuse1", 0);
 		diffuseShader.setInt("material.texture_specular1", 1);
-		glActiveTexture(GL_TEXTURE0);
+		glActiveTexture(GL_TEXTURE0); //Bind externally loaded textures to model
 		ResourceManager::getTexture("container").bind();
 		glActiveTexture(GL_TEXTURE1);
 		ResourceManager::getTexture("containerSpecular").bind();
@@ -285,49 +298,59 @@ int main()
 		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
 		diffuseShader.setMat4("model", model);
 		diffuseShader.setInt("skybox", 4);
-		glActiveTexture(GL_TEXTURE4);
+		glActiveTexture(GL_TEXTURE4); //Bind skybox to the diffuse shader for reflections
 		skybox.bind();
 		ResourceManager::getModel("sphere").draw(diffuseShader);
 
-
+		//Draw projectile ray
 		rayShader.use();
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, projectilePos);
 		rayShader.setMat4("model", model);
 		projectileRay.draw(rayShader);
 
-		geomTestShader.use();
-		glBindVertexArray(planeVAO);
-		glDrawArrays(GL_POINTS, 0, 4);
-
+		//Draw skybox, disable wireframe and change depth testing for faster drawing
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glDepthFunc(GL_LEQUAL);
 
 		glDepthMask(false);
 		skyboxShader.use();
-		skyboxShader.setMat4("view", glm::mat4(glm::mat3(cam.GetViewMatrix())));
+		skyboxShader.setMat4("view", glm::mat4(glm::mat3(cam.GetViewMatrix()))); //View matrix is a bit different here, since we disregard translations
 		skyboxShader.setMat4("projection", projection);
 		glBindVertexArray(skyboxVAO);
 		skybox.bind();
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 		glDepthMask(true);
 
+		//Reenable wireframe if needed and return depth func to normal
 		glDepthFunc(GL_LESS);
+		if (isWireframe)
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+		//Draw light, half transparent
+		unlitShader.use();
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, lightPos);
+		model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
+		unlitShader.setMat4("model", model);
+		ResourceManager::getModel("light").draw(unlitShader);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
+	ResourceManager::Clear();
 	glfwTerminate();
 	return 0;
 }
 
+//Callback function for window resizing
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
 }
 
+//Callback function for mouse movement handling
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
 	if (firstMouse)
@@ -345,19 +368,22 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	cam.ProcessMouseMovement(xoffset, yoffset);
 }
 
+//Callback function for mouse scroll handling
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	cam.ProcessMouseScroll(yoffset);
 }
 
+//Keyboard input callback function
 void processInput(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 	{
-		glfwSetWindowShouldClose(window, true);
+		glfwSetWindowShouldClose(window, true); //Quit on esc press
 	}
+	
 	float camSpeed = 2.5f * deltaTime;
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) //Camera movement
 		cam.ProcessKeyboard(FORWARD, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 		cam.ProcessKeyboard(BACKWARD, deltaTime);
@@ -365,11 +391,14 @@ void processInput(GLFWwindow* window)
 		cam.ProcessKeyboard(LEFT, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		cam.ProcessKeyboard(RIGHT, deltaTime);
+
+	//Model wireframe toggle
 	if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS)
 		isWireframe = true;
 	else if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS)
 		isWireframe = false;
 
+	//Resizing for the model falloff param (See simpleFalloff shader)
 	float resizeSpeed = camSpeed;
 	if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS)
 	{
@@ -380,6 +409,7 @@ void processInput(GLFWwindow* window)
 		falloffRadius -= resizeSpeed;
 	}
 
+	//Movement of the effector for falloff calculation (see simpleFalloff shader)
 	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
 	{
 		projectilePos.y += resizeSpeed;

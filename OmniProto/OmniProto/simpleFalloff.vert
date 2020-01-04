@@ -5,9 +5,12 @@ layout (location = 2) in vec2 aTexCoords;
 
 out vec2 TexCoords;
 
+layout (std140) uniform Matrices
+{
+	mat4 projection;
+	mat4 view;
+};
 uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
 
 uniform vec3 projectilePos;// = vec3(0,1.5,0);
 vec3 projectileDir = vec3(0,-1,0); //normalized hopefully

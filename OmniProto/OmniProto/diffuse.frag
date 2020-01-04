@@ -16,9 +16,11 @@ struct Light {
 
 out vec4 FragColor;
 
-in vec2 TexCoords;
-in vec3 Normal;
-in vec3 FragPos;
+in VS_OUT{
+	vec2 TexCoords;
+	vec3 Normal;
+	vec3 FragPos;
+} fs_in;
 
 uniform Material material;
 uniform Light light;
@@ -28,12 +30,12 @@ void main()
 {    
     vec3 ambient = material.ambient * light.ambient;
 
-	vec3 norm = normalize(Normal);
-	vec3 lightDir = normalize(light.position - FragPos);
+	vec3 norm = normalize(fs_in.Normal);
+	vec3 lightDir = normalize(light.position - fs_in.FragPos);
 	float diff = max(dot(norm, lightDir), 0.0);
 	vec3 diffuse = diff * light.diffuse * material.diffuse;
 	
-	vec3 viewDir = normalize(viewPos - FragPos);
+	vec3 viewDir = normalize(viewPos - fs_in.FragPos);
 	vec3 reflectDir = reflect(-lightDir, norm);
 	float spec = pow(max(dot(viewDir,reflectDir), 0.0), material.shininess);
 	vec3 specular = spec * material.specular * light.specular;

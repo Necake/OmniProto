@@ -1,31 +1,31 @@
 #include "ResourceManager.h"
 
-map<string, Texture> ResourceManager::Textures;
+map<string, Texture> ResourceManager::Textures; //Instantiate static maps
 map<string, Shader> ResourceManager::Shaders;
 map<string, Model> ResourceManager::Models;
 
 Texture& ResourceManager::loadTexture(const char* texturePath, std::string name)
 {
-	Texture texture(texturePath);
+	Texture texture(texturePath); //Construct texture from path (see Texture class)
 	Textures[name] = texture;
-	return Textures[name];
+	return Textures[name]; //Store the texture in the map and return
 }
 
 Texture& ResourceManager::getTexture(std::string name)
 {
-	return Textures[name];
+	return Textures[name]; //Return texture from map
 }
 
 Model& ResourceManager::loadModel(const char* modelPath, std::string name)
 {
-	Model model(modelPath);
+	Model model(modelPath); //Construct model, store in map, return reference (see Model class for construction)
 	Models[name] = model;
 	return Models[name];
 }
 
 Model& ResourceManager::getModel(std::string name)
 {
-	return Models[name];
+	return Models[name]; //Return ref from map
 }
 
 void ResourceManager::Clear()
