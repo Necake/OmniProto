@@ -180,16 +180,22 @@
   <ItemGroup>
     <None Include="basicModel.frag" />
     <None Include="basicModel.vert" />
+    <None Include="calcNormals.geom" />
     <None Include="diffuse.frag" />
+    <None Include="diffuse.geom" />
     <None Include="diffuse.vert" />
     <None Include="diffuse_tex.frag">
       <SubType>
       </SubType>
     </None>
+    <None Include="drawNormals.frag" />
+    <None Include="drawNormals.geom" />
+    <None Include="drawNormals.vert" />
     <None Include="explode.geom" />
     <None Include="ray.frag" />
     <None Include="ray.vert" />
     <None Include="simpleFalloff.frag" />
+    <None Include="simpleFalloff.geom" />
     <None Include="simpleFalloff.vert" />
     <None Include="skybox.frag" />
     <None Include="skybox.vert" />

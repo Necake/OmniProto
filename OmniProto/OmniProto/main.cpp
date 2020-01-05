@@ -138,9 +138,11 @@ int main()
 	glm::vec3 lightPos(1.2f, 1.0f, 2.0f); //Position of the point light (represented by the light bulb)
 
 	//Loading and compiling shaders (TODO: move to resource manager)
-	Shader diffuseShader("../OmniProto/diffuse.vert", "../OmniProto/diffuse_tex.frag");
+	Shader diffuseShader("../OmniProto/diffuse.vert", "../OmniProto/diffuse_tex.frag", "../OmniProto/diffuse.geom");
+	Shader normalShader("../OmniProto/drawNormals.vert", "../OmniProto/drawNormals.frag", "../OmniProto/calcNormals.geom");
+	Shader normalCalcShader("../OmniProto/simpleFalloff.vert", "../OmniProto/drawNormals.frag", "../OmniProto/simpleFalloff.geom");
 	Shader unlitShader("../OmniProto/unlit.vert", "../OmniProto/unlit.frag");
-	Shader modelShader("../OmniProto/simpleFalloff.vert", "../OmniProto/simpleFalloff.frag");
+	Shader modelShader("../OmniProto/simpleFalloff.vert", "../OmniProto/simpleFalloff.frag", "../OmniProto/simpleFalloff.geom");
 	Shader rayShader("../OmniProto/ray.vert", "../OmniProto/ray.frag");
 	Shader skyboxShader("../OmniProto/skybox.vert", "../OmniProto/skybox.frag");
 	//Loading textures
@@ -158,6 +160,7 @@ int main()
 	Cubemap skybox(skyboxTextures);
 	//Loading models and logging their sizes
 	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/sphereMapped.obj", "sphere");
+	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/sphereLowRes.obj", "sphereLowRes");
 	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/bulb.obj", "light");
 	ResourceManager::getModel("sphere").getSpecs();
 	ResourceManager::getModel("light").getSpecs();
@@ -198,6 +201,7 @@ int main()
 	glUniformBlockBinding(unlitShader.ID, glGetUniformBlockIndex(unlitShader.ID, "Matrices"), 0);
 	glUniformBlockBinding(modelShader.ID, glGetUniformBlockIndex(modelShader.ID, "Matrices"), 0);
 	glUniformBlockBinding(rayShader.ID, glGetUniformBlockIndex(rayShader.ID, "Matrices"), 0);
+	glUniformBlockBinding(normalShader.ID, glGetUniformBlockIndex(normalShader.ID, "Matrices"), 0);
 	//Init uniform buffer that holds the projection and view matrix (shared across multiple shaders)
 	unsigned int UBOMatrices;
 	glGenBuffers(1, &UBOMatrices);
@@ -205,12 +209,6 @@ int main()
 	glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBOMatrices, 0, 2 * sizeof(glm::mat4));
-	//Filling the first half of the uniform buffer with the projection matrix
-	glfwGetWindowSize(window, &windowWidth, &windowHeight);
-	glm::mat4 projection = glm::perspective(glm::radians(cam.Zoom), (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
-	glBindBuffer(GL_UNIFORM_BUFFER, UBOMatrices);
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projection));
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	//================================================================================
 	//Main loop
@@ -225,6 +223,12 @@ int main()
 		glClearColor(.05f, 0.05f, .05f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		//Filling the first half of the uniform buffer with the projection matrix
+		glfwGetWindowSize(window, &windowWidth, &windowHeight);
+		glm::mat4 projection = glm::perspective(glm::radians(cam.Zoom), (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
+		glBindBuffer(GL_UNIFORM_BUFFER, UBOMatrices);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projection));
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 		//Filling the second half of the uniform buffer with the view matrix
 		glm::mat4 view = glm::mat4(1.0f);
 		view = cam.GetViewMatrix();
@@ -239,8 +243,10 @@ int main()
 		if (isWireframe)
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Draw everything in wireframe from this point if told so (see processInput)
 		
+		glDisable(GL_CULL_FACE);
+
 		//Render deformable model
-		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f))); //model matrix setup, rotation changes based on time
+		//model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f))); //model matrix setup, rotation changes based on time
 		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
 		modelShader.use(); //Shader calls
 		modelShader.setMat4("model", model);
@@ -251,8 +257,16 @@ int main()
 		modelShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
 		modelShader.setVec3("lightPos", lightPos);
 		modelShader.setVec3("viewPos", cam.Position);
-		ResourceManager::getModel("sphere").draw(modelShader); //Render with appropriate shader
+		ResourceManager::getModel("sphereLowRes").draw(modelShader); //Render with appropriate shader
 
+		normalCalcShader.use(); 
+		normalCalcShader.setMat4("model", model);
+		normalCalcShader.setVec3("projectilePos", projectilePos);
+		normalCalcShader.setFloat("time", glfwGetTime());
+		normalCalcShader.setFloat("radius", falloffRadius);
+		normalCalcShader.setVec3("viewPos", cam.Position);
+		ResourceManager::getModel("sphereLowRes").draw(normalCalcShader);
+		glEnable(GL_CULL_FACE);
 		//Render the two textured spheres, same idea as above, just with more light-related shader calls (see diffuse / diffuse_tex shader)
 		diffuseShader.use();
 		model = glm::mat4(1.0f);
@@ -288,11 +302,18 @@ int main()
 		diffuseShader.setVec3("viewPos", cam.Position);
 		diffuseShader.setInt("material.texture_diffuse1", 0);
 		diffuseShader.setInt("material.texture_specular1", 1);
+		//diffuseShader.setFloat("time", (float)glfwGetTime());
 		glActiveTexture(GL_TEXTURE0); //Bind externally loaded textures to model
 		ResourceManager::getTexture("container").bind();
 		glActiveTexture(GL_TEXTURE1);
 		ResourceManager::getTexture("containerSpecular").bind();
 		ResourceManager::getModel("sphere").draw(diffuseShader);
+
+		normalShader.use();
+		normalShader.setMat4("model", model);
+		ResourceManager::getModel("sphere").draw(normalShader);
+		
+		diffuseShader.use();
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(20,0,0));
 		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
@@ -301,6 +322,10 @@ int main()
 		glActiveTexture(GL_TEXTURE4); //Bind skybox to the diffuse shader for reflections
 		skybox.bind();
 		ResourceManager::getModel("sphere").draw(diffuseShader);
+
+		normalShader.use();
+		normalShader.setMat4("model", model);
+		ResourceManager::getModel("sphere").draw(normalShader);
 
 		//Draw projectile ray
 		rayShader.use();

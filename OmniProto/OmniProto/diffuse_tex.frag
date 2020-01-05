@@ -42,7 +42,7 @@ struct FlashLight {
 
 out vec4 FragColor;
 
-in VS_OUT{
+in GS_OUT{
 	vec2 TexCoords;
 	vec3 Normal;
 	vec3 FragPos;

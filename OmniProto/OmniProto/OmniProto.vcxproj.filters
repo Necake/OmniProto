@@ -130,5 +130,23 @@
     <None Include="explode.geom">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="diffuse.geom">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="drawNormals.geom">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="drawNormals.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="drawNormals.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="simpleFalloff.geom">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="calcNormals.geom">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

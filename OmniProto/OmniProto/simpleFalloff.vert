@@ -3,7 +3,12 @@ layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoords;
 
-out vec2 TexCoords;
+out VS_OUT{
+	vec2 texCoords;
+	vec3 normal;
+    vec3 FragPos;
+    mat4 model;
+} vs_out;
 
 layout (std140) uniform Matrices
 {
@@ -22,10 +27,13 @@ float falloff(float dist);
 
 void main()
 {
-    TexCoords = aTexCoords;
+    vs_out.texCoords = aTexCoords;
+	vs_out.normal = mat3(transpose(inverse(model))) * aNormal;
+	vs_out.model = model;
+	vs_out.FragPos = vec3(model * vec4(aPos, 1.0));
 	//vec4 projectPos = projection * view * model * vec4(projectilePos, 1.0f);
     vec4 pos = model * vec4(aPos, 1.0);
-	pos += vec4(projectileDir * falloff(distance(projectilePos.xyz, pos.xyz)) * ((sin(time) + 1) / 2), 0.0f);
+	pos += vec4(projectileDir * falloff(distance(projectilePos.xyz, pos.xyz)), 0.0f);
 	pos = projection * view * pos;
 	//pos += vec4(1,0,0,0);
 	gl_Position = pos;
