@@ -19,10 +19,11 @@ public:
 
 	}
 	void draw(Shader shader);
+	void drawInstanced(Shader shader, unsigned int numInstances);
 	void getSpecs();
+	std::vector<Mesh> meshes;
 private:
 	std::vector<TextureData> textures_loaded;
-	std::vector<Mesh> meshes;
 	std::string directory;
 
 	void loadModel(std::string path);

@@ -184,6 +184,7 @@
     <None Include="diffuse.frag" />
     <None Include="diffuse.geom" />
     <None Include="diffuse.vert" />
+    <None Include="diffuseInstanced.vert" />
     <None Include="diffuse_tex.frag">
       <SubType>
       </SubType>
@@ -192,6 +193,8 @@
     <None Include="drawNormals.geom" />
     <None Include="drawNormals.vert" />
     <None Include="explode.geom" />
+    <None Include="instancing.frag" />
+    <None Include="instancing.vert" />
     <None Include="ray.frag" />
     <None Include="ray.vert" />
     <None Include="simpleFalloff.frag" />
