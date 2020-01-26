@@ -139,7 +139,7 @@ int main()
 
 	//Loading and compiling shaders (TODO: move to resource manager)
 	Shader diffuseShader("../OmniProto/diffuse.vert", "../OmniProto/diffuse_tex.frag", "../OmniProto/diffuse.geom");
-	Shader diffuseShaderInstanced("../OmniProto/diffuseInstanced.vert", "../OmniProto/diffuse_tex.frag", "../OmniProto/diffuse.geom");
+	//Shader diffuseShaderInstanced("../OmniProto/diffuseInstanced.vert", "../OmniProto/diffuse_tex.frag", "../OmniProto/diffuse.geom");
 	Shader normalShader("../OmniProto/drawNormals.vert", "../OmniProto/drawNormals.frag", "../OmniProto/calcNormals.geom");
 	Shader normalCalcShader("../OmniProto/simpleFalloff.vert", "../OmniProto/drawNormals.frag", "../OmniProto/simpleFalloff.geom");
 	Shader unlitShader("../OmniProto/unlit.vert", "../OmniProto/unlit.frag");
@@ -247,7 +247,7 @@ int main()
 	glUniformBlockBinding(modelShader.ID, glGetUniformBlockIndex(modelShader.ID, "Matrices"), 0);
 	glUniformBlockBinding(rayShader.ID, glGetUniformBlockIndex(rayShader.ID, "Matrices"), 0);
 	glUniformBlockBinding(normalShader.ID, glGetUniformBlockIndex(normalShader.ID, "Matrices"), 0);
-	glUniformBlockBinding(diffuseShaderInstanced.ID, glGetUniformBlockIndex(diffuseShaderInstanced.ID, "Matrices"), 0);
+	//glUniformBlockBinding(diffuseShaderInstanced.ID, glGetUniformBlockIndex(diffuseShaderInstanced.ID, "Matrices"), 0);
 	//Init uniform buffer that holds the projection and view matrix (shared across multiple shaders)
 	unsigned int UBOMatrices;
 	glGenBuffers(1, &UBOMatrices);
@@ -363,47 +363,6 @@ int main()
 		normalShader.use();
 		normalShader.setMat4("model", model);
 		ResourceManager::getModel("sphere").draw(normalShader);
-
-		diffuseShader.use();
-		model = glm::mat4(1.0f);
-		model = glm::scale(model, glm::vec3(3, 3, 3));
-		diffuseShader.setMat4("model", model);
-		ResourceManager::getModel("planet").draw(diffuseShader);
-
-		diffuseShaderInstanced.use();
-		diffuseShaderInstanced.setMat4("model", model);
-		diffuseShaderInstanced.setVec3("material.ambient", 0.34f, 1.0f, 0.75f);
-		diffuseShaderInstanced.setVec3("material.diffuse", 1.0f, 0.34f, 0.95f);
-		diffuseShaderInstanced.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
-		diffuseShaderInstanced.setFloat("material.shininess", 32.0f);
-		diffuseShaderInstanced.setVec3("pointLight.position", lightPos);
-		diffuseShaderInstanced.setVec3("pointLight.ambient", 0.4f, 0.4f, 0.4f);
-		diffuseShaderInstanced.setVec3("pointLight.diffuse", 0.8f, 0.8f, 0.8f);
-		diffuseShaderInstanced.setVec3("pointLight.specular", 1.0f, 1.0f, 1.0f);
-		diffuseShaderInstanced.setFloat("pointLight.constant", 1.0f);
-		diffuseShaderInstanced.setFloat("pointLight.linear", 0.09f);
-		diffuseShaderInstanced.setFloat("pointLight.quadratic", 0.032f);
-		diffuseShaderInstanced.setVec3("dirLight.direction", 1.0f, 1.0f, 0);
-		diffuseShaderInstanced.setVec3("dirLight.ambient", 0.2f, 0.1f, 0.05f);
-		diffuseShaderInstanced.setVec3("dirLight.diffuse", 0.4f, 0.2f, 0.1f);
-		diffuseShaderInstanced.setVec3("dirLight.specular", 1.0f, 0.8f, 0.5f);
-		diffuseShaderInstanced.setVec3("flashLight.position", cam.Position);
-		diffuseShaderInstanced.setVec3("flashLight.direction", cam.Front);
-		diffuseShaderInstanced.setFloat("flashLight.cutoff", glm::cos(glm::radians(12.5f)));
-		diffuseShaderInstanced.setFloat("flashLight.outerCutoff", glm::cos(glm::radians(17.5f)));
-		diffuseShaderInstanced.setFloat("flashLight.constant", 1.0f);
-		diffuseShaderInstanced.setFloat("flashLight.linear", 0.09f);
-		diffuseShaderInstanced.setFloat("flashLight.quadratic", 0.032f);
-		diffuseShaderInstanced.setVec3("flashLight.ambient", 0, 0, 0);
-		diffuseShaderInstanced.setVec3("flashLight.diffuse", 0.8f, 0.8f, 0.8f);
-		diffuseShaderInstanced.setVec3("flashLight.specular", 1.0f, 1.0f, 1.0f);
-		diffuseShaderInstanced.setVec3("viewPos", cam.Position);
-		diffuseShaderInstanced.setInt("material.texture_diffuse1", 0);
-		diffuseShaderInstanced.setInt("material.texture_specular1", 1);
-		diffuseShaderInstanced.setInt("skybox", 4);
-		//glActiveTexture(GL_TEXTURE0);
-		//glBindTexture(GL_TEXTURE0, 0);
-		ResourceManager::getModel("asteroid").drawInstanced(diffuseShaderInstanced, amount);
 
 		//Draw projectile ray
 		rayShader.use();
