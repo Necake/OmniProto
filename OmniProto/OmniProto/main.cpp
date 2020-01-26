@@ -22,6 +22,7 @@
 #include "ResourceManager.h"
 #include "RayUtil.h"
 #include "Cubemap.h"
+#include "Particle.h"
 
 //Function prototypes
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
@@ -40,6 +41,8 @@ bool firstMouse = true, isWireframe = false;
 //Falloff related constants (see simpleFalloff shader)
 float falloffRadius = 2.0f;
 glm::vec3 projectilePos(0.0f, 0.0f, 0.0f);
+
+bool simulationStarted = false;
 
 extern "C"
 { //Use the discrete GPU instead of the onboard GPU (AMD only, for NVidia see http://developer.download.nvidia.com/devzone/devcenter/gamegraphics/files/OptimusRenderingPolicies.pdf)
@@ -256,6 +259,8 @@ int main()
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBOMatrices, 0, 2 * sizeof(glm::mat4));
 
+	Particle particle(ResourceManager::getModel("sphereLowRes"), diffuseShader, 3, glm::vec3(0, 0, 0), glm::vec3(10, 0, 0), 10);
+
 	//================================================================================
 	//Main loop
 	//================================================================================
@@ -363,6 +368,9 @@ int main()
 		normalShader.use();
 		normalShader.setMat4("model", model);
 		ResourceManager::getModel("sphere").draw(normalShader);
+
+		if(simulationStarted)
+			particle.update(deltaTime);
 
 		//Draw projectile ray
 		rayShader.use();
@@ -487,5 +495,10 @@ void processInput(GLFWwindow* window)
 	else if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
 	{
 		projectilePos.x -= resizeSpeed;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+	{
+		simulationStarted = true;
 	}
 }
