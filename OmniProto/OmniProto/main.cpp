@@ -16,7 +16,7 @@
 #include<iostream>
 #include<string>
 
-#include "shader.h"
+#include "Shader.h"
 #include "camera.h"
 #include "model.h"
 #include "ResourceManager.h"

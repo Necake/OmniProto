@@ -11,7 +11,7 @@
 #include <map>
 #include <string>
 #include "Texture.h"
-#include "shader.h"
+#include "Shader.h"
 #include "model.h"
 
 using namespace std;
