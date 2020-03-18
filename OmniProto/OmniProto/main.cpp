@@ -23,6 +23,7 @@
 #include "RayUtil.h"
 #include "Cubemap.h"
 #include "Particle.h"
+#include "DiffuseShader.h"
 
 //Function prototypes
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
@@ -141,7 +142,7 @@ int main()
 	glm::vec3 lightPos(1.2f, 1.0f, 2.0f); //Position of the point light (represented by the light bulb)
 
 	//Loading and compiling shaders (TODO: move to resource manager)
-	Shader diffuseShader("../OmniProto/diffuse.vert", "../OmniProto/diffuse_tex.frag", "../OmniProto/diffuse.geom");
+	DiffuseShader diffuseShader(true);
 	//Shader diffuseShaderInstanced("../OmniProto/diffuseInstanced.vert", "../OmniProto/diffuse_tex.frag", "../OmniProto/diffuse.geom");
 	Shader normalShader("../OmniProto/drawNormals.vert", "../OmniProto/drawNormals.frag", "../OmniProto/calcNormals.geom");
 	Shader normalCalcShader("../OmniProto/simpleFalloff.vert", "../OmniProto/drawNormals.frag", "../OmniProto/simpleFalloff.geom");
@@ -315,7 +316,26 @@ int main()
 		model = glm::translate(model, glm::vec3(2, 0, 0));
 		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
 		model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
-		diffuseShader.setMat4("model", model);
+		
+		diffuseShader.setupGeneral(cam.Position, model, 4);
+		glm::vec3 ambient = glm::vec3(0.34f, 1.0f, 0.75f);
+		glm::vec3 diffuse = glm::vec3(1.0f, 0.34f, 0.95f);
+		glm::vec3 specular = glm::vec3(0.5f, 0.5f, 0.5f);
+		diffuseShader.setupMaterial(ambient, diffuse, specular, 32.0f);
+		ambient = glm::vec3(0.4f, 0.4f, 0.4f);
+		diffuse = glm::vec3(0.8f, 0.8f, 0.8f);
+		specular = glm::vec3(1.0f, 1.0f, 1.0f);
+		diffuseShader.setupPointLight(lightPos, ambient, diffuse, specular, 1.0f, 0.09f, 0.032f);
+		glm::vec3 dir = glm::vec3(1.0f, 1.0f, 0);
+		ambient = glm::vec3(0.2f, 0.1f, 0.05f);
+		diffuse = glm::vec3(0.4f, 0.2f, 0.1f);
+		specular = glm::vec3(1.0f, 0.8f, 0.5f);
+		diffuseShader.setupDirecitonalLight(dir, ambient, diffuse, specular);
+		ambient = glm::vec3(0, 0, 0);
+		diffuse = glm::vec3(0.8f, 0.8f, 0.8f);
+		specular = glm::vec3(1.0f, 1.0f, 1.0f);
+		diffuseShader.setupFlashLight(cam.Position, cam.Front, ambient, diffuse, specular, 1.0f, 0.09f, 0.032f, glm::cos(glm::radians(12.5f)), glm::cos(glm::radians(17.5f)));
+		/*diffuseShader.setMat4("model", model);
 		diffuseShader.setVec3("material.ambient", 0.34f, 1.0f, 0.75f);
 		diffuseShader.setVec3("material.diffuse", 1.0f, 0.34f, 0.95f);
 		diffuseShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
@@ -341,7 +361,7 @@ int main()
 		diffuseShader.setVec3("flashLight.ambient", 0, 0, 0);
 		diffuseShader.setVec3("flashLight.diffuse", 0.8f, 0.8f, 0.8f);
 		diffuseShader.setVec3("flashLight.specular", 1.0f, 1.0f, 1.0f);
-		diffuseShader.setVec3("viewPos", cam.Position);
+		diffuseShader.setVec3("viewPos", cam.Position);*/
 		diffuseShader.setInt("material.texture_diffuse1", 0);
 		diffuseShader.setInt("material.texture_specular1", 1);
 		//diffuseShader.setFloat("time", (float)glfwGetTime());
@@ -351,9 +371,9 @@ int main()
 		ResourceManager::getTexture("containerSpecular").bind();
 		ResourceManager::getModel("sphere").draw(diffuseShader);
 
-		normalShader.use();
-		normalShader.setMat4("model", model);
-		ResourceManager::getModel("sphere").draw(normalShader);
+		//normalShader.use();
+		//normalShader.setMat4("model", model);
+		//ResourceManager::getModel("sphere").draw(normalShader);
 		
 		diffuseShader.use();
 		model = glm::mat4(1.0f);
