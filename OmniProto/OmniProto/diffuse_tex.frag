@@ -3,6 +3,7 @@ struct Material{
 	sampler2D texture_diffuse1;
 	sampler2D texture_specular1;
 	float shininess;
+    float reflectiveness;
 };
 
 struct PointLight {
@@ -55,9 +56,13 @@ uniform FlashLight flashLight;
 uniform vec3 viewPos;
 uniform samplerCube skybox;
 
+uniform bool blinn;
+
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 vec3 CalcDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDir);
 vec3 CalcFlashLight(FlashLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
+
+const float kPi = 3.14159265;
 
 void main()
 {   
@@ -69,7 +74,7 @@ void main()
 
     vec3 r = reflect(viewDir, norm);
 
-    FragColor = vec4(mix(result, texture(skybox, r).rgb, 0.5), 1.0);
+    FragColor = vec4(mix(result, texture(skybox, r).rgb, material.reflectiveness), 1.0);
 }
 
 vec3 CalcDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDir)
@@ -81,7 +86,20 @@ vec3 CalcDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDir)
 	float diff = max(dot(norm, lightDir), 0.0);
 	vec3 diffuse = diff * light.diffuse * vec3(texture(material.texture_diffuse1, fs_in.TexCoords));
 	vec3 reflectDir = reflect(-lightDir, norm);
-	float spec = pow(max(dot(viewDir,reflectDir), 0.0), material.shininess);
+	float spec = 0;// pow(max(dot(viewDir,reflectDir), 0.0), material.shininess);
+
+    if( blinn )
+    {
+       float kEnergyConservation = ( 8.0 + material.shininess ) / ( 8.0 * kPi ); 
+       vec3 halfwayDir = normalize(lightDir + viewDir); 
+       spec = kEnergyConservation * pow(max(dot(normal, halfwayDir), 0.0), material.shininess);
+    }
+    else
+    {
+       float kEnergyConservation = ( 2.0 + material.shininess ) / ( 2.0 * kPi ); 
+       vec3 reflectDir = reflect(-lightDir, normal);
+       spec = kEnergyConservation * pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    }
 	vec3 specular = spec * vec3(texture(material.texture_specular1, fs_in.TexCoords)) * light.specular;
 
     return (ambient + diffuse + specular);
@@ -96,7 +114,21 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 	float diff = max(dot(norm, lightDir), 0.0);
 	vec3 diffuse = diff * light.diffuse * vec3(texture(material.texture_diffuse1, fs_in.TexCoords));
 	vec3 reflectDir = reflect(-lightDir, norm);
-	float spec = pow(max(dot(viewDir,reflectDir), 0.0), material.shininess);
+	float spec = 0;// pow(max(dot(viewDir,reflectDir), 0.0), material.shininess);
+
+    if( blinn )
+    {
+       float kEnergyConservation = ( 8.0 + material.shininess ) / ( 8.0 * kPi ); 
+       vec3 halfwayDir = normalize(lightDir + viewDir); 
+       spec = kEnergyConservation * pow(max(dot(normal, halfwayDir), 0.0), material.shininess);
+    }
+    else
+    {
+       float kEnergyConservation = ( 2.0 + material.shininess ) / ( 2.0 * kPi ); 
+       vec3 reflectDir = reflect(-lightDir, normal);
+       spec = kEnergyConservation * pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    }
+
 	vec3 specular = spec * vec3(texture(material.texture_specular1, fs_in.TexCoords)) * light.specular;
 
 	float dist = length(light.position - fragPos);
@@ -112,7 +144,21 @@ vec3 CalcFlashLight(FlashLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     float diff = max(dot(normal, lightDir), 0.0);
     // specular shading
     vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    float spec = 0;//pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+
+    if( blinn )
+    {
+       float kEnergyConservation = ( 8.0 + material.shininess ) / ( 8.0 * kPi ); 
+       vec3 halfwayDir = normalize(lightDir + viewDir); 
+       spec = kEnergyConservation * pow(max(dot(normal, halfwayDir), 0.0), material.shininess);
+    }
+    else
+    {
+       float kEnergyConservation = ( 2.0 + material.shininess ) / ( 2.0 * kPi ); 
+       vec3 reflectDir = reflect(-lightDir, normal);
+       spec = kEnergyConservation * pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    }
+
     // attenuation
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));    

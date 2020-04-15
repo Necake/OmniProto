@@ -28,12 +28,12 @@ void Texture::generate(const char* path)
 	{
 		if (nrChans == 3) //Check wether the texture has an alpha channel
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, texData);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, texData);
 			internalFormat = GL_RGB; imageFormat = GL_RGB;
 		}
 		else if (nrChans == 4)
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texData);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texData);
 			internalFormat = GL_RGBA; imageFormat = GL_RGBA;
 		}
 		glGenerateMipmap(GL_TEXTURE_2D); //Generate texture mipmaps
@@ -54,7 +54,9 @@ void Texture::bind() const
 unsigned int Texture::generateModelTexture(const char* path, const std::string& directory, bool gamma)
 {
 	std::string filename = std::string(path);
-	filename = directory + '/' + filename;
+	filename = directory + '\\' + filename;
+
+	std::cout << "path " << path;
 
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
@@ -63,16 +65,26 @@ unsigned int Texture::generateModelTexture(const char* path, const std::string& 
 	unsigned char* data = ImageLoader::loadImage(filename.c_str(), &width, &height, &nrComponents);
 	if (data)
 	{
-		GLenum format;
+		GLenum format = GL_RGBA;
+		GLenum iFormat = GL_SRGB_ALPHA;
 		if (nrComponents == 1)
+		{
 			format = GL_RED;
+			iFormat = GL_RED;
+		}
 		else if (nrComponents == 3)
+		{
 			format = GL_RGB;
+			iFormat = GL_SRGB;
+		}
 		else if (nrComponents == 4)
+		{
 			format = GL_RGBA;
+			iFormat = GL_SRGB_ALPHA;
+		}
 
 		glBindTexture(GL_TEXTURE_2D, textureID);
-		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, iFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -84,7 +96,7 @@ unsigned int Texture::generateModelTexture(const char* path, const std::string& 
 	}
 	else
 	{
-		std::cout << "Texture failed to load at path: " << path << std::endl;
+		std::cout << "Texture failed to load at path: " << filename << std::endl;
 		ImageLoader::freeImage(data);
 	}
 

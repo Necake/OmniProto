@@ -28,8 +28,8 @@ void Cubemap::generate(const char* paths[6])
 		unsigned char* data = ImageLoader::loadImage(paths[i], &width, &height, &nrChans); //Load the 6 images for the cubemap
 		if (data)
 		{
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data); //Bind the texture into the cubemap accoringly
-			internalFormat = GL_RGB;
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_SRGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data); //Bind the texture into the cubemap accoringly
+			internalFormat = GL_SRGB;
 			imageFormat = GL_RGB;
 			ImageLoader::freeImage(data); //Free the raw data
 		}

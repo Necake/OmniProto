@@ -30,113 +30,131 @@
 //    >mat4 model, view, projection (view and projection shared through uniform block binding)
 //========================================================================================
 
-
-class DiffuseShader : public Shader
+struct DiffuseShaderUniforms
 {
-public:
-	bool isTextured;
 	unsigned int matAmbient, matDiffuse, matSpecular, matShine;
 	unsigned int plAmbient, plDiffuse, plSpecular, plConst, plLinear, plQuadratic, plPosition;
 	unsigned int dlAmbient, dlDiffuse, dlSpecular, dlDirection;
 	unsigned int flAmbient, flDiffuse, flSpecular, flConst, flLinear, flQuadratic, flPosition, flDirection, flCutoff, flOuterCutoff;
 	unsigned int model, viewPos, skybox;
+};
+
+
+class DiffuseShader : public Shader
+{
+public:
+	bool isTextured;
+
+	glm::vec3 matAmbient, matDiffuse, matSpecular;
+	float matShine;
+	
+	glm::vec3 plAmbient, plDiffuse, plSpecular, plPosition;
+	float plConst, plLinear, plQuadratic;
+
+	glm::vec3 dlAmbient, dlDiffuse, dlSpecular, dlDirection;
+
+	glm::vec3 flAmbient, flDiffuse, flSpecular, flPosition, flDirection;
+	float flConst, flLinear, flQuadratic, flCutoff, flOuterCutoff;
+	//====================================================================================================
 	DiffuseShader(bool isTextured) : 
 		Shader("../OmniProto/diffuse.vert", "../OmniProto/diffuse_tex.frag", "../OmniProto/diffuse.geom"), isTextured(isTextured)
 	{
-		matAmbient = glGetUniformLocation(this->ID, "material.ambient");
+		uniforms.matAmbient = glGetUniformLocation(this->ID, "material.ambient");
 		if (isTextured)
 		{
-			matDiffuse = glGetUniformLocation(this->ID, "material.texture_diffuse1");
-			matSpecular = glGetUniformLocation(this->ID, "material.texture_specular1");
+			uniforms.matDiffuse = glGetUniformLocation(this->ID, "material.texture_diffuse1");
+			uniforms.matSpecular = glGetUniformLocation(this->ID, "material.texture_specular1");
 		}
 		else
 		{
-			matDiffuse = glGetUniformLocation(this->ID, "material.diffuse");
-			matSpecular = glGetUniformLocation(this->ID, "material.specular");
+			uniforms.matDiffuse = glGetUniformLocation(this->ID, "material.diffuse");
+			uniforms.matSpecular = glGetUniformLocation(this->ID, "material.specular");
 		}
-		matShine = glGetUniformLocation(this->ID, "material.shininess");
+		uniforms.matShine = glGetUniformLocation(this->ID, "material.shininess");
 
-		plAmbient = glGetUniformLocation(this->ID, "pointLight.ambient");
-		plDiffuse = glGetUniformLocation(this->ID, "pointLight.diffuse");
-		plSpecular = glGetUniformLocation(this->ID, "pointLight.specular");
-		plConst = glGetUniformLocation(this->ID, "pointLight.constant");
-		plLinear = glGetUniformLocation(this->ID, "pointLight.linear");
-		plQuadratic = glGetUniformLocation(this->ID, "pointLight.quadratic");
-		plPosition = glGetUniformLocation(this->ID, "pointLight.position");
+		uniforms.plAmbient = glGetUniformLocation(this->ID, "pointLight.ambient");
+		uniforms.plDiffuse = glGetUniformLocation(this->ID, "pointLight.diffuse");
+		uniforms.plSpecular = glGetUniformLocation(this->ID, "pointLight.specular");
+		uniforms.plConst = glGetUniformLocation(this->ID, "pointLight.constant");
+		uniforms.plLinear = glGetUniformLocation(this->ID, "pointLight.linear");
+		uniforms.plQuadratic = glGetUniformLocation(this->ID, "pointLight.quadratic");
+		uniforms.plPosition = glGetUniformLocation(this->ID, "pointLight.position");
 
-		dlDirection = glGetUniformLocation(this->ID, "dirLight.direction");
-		dlAmbient = glGetUniformLocation(this->ID, "dirLight.ambient");
-		dlDiffuse = glGetUniformLocation(this->ID, "dirLight.diffuse");
-		dlSpecular = glGetUniformLocation(this->ID, "dirLight.specular");
+		uniforms.dlDirection = glGetUniformLocation(this->ID, "dirLight.direction");
+		uniforms.dlAmbient = glGetUniformLocation(this->ID, "dirLight.ambient");
+		uniforms.dlDiffuse = glGetUniformLocation(this->ID, "dirLight.diffuse");
+		uniforms.dlSpecular = glGetUniformLocation(this->ID, "dirLight.specular");
 
-		flPosition = glGetUniformLocation(this->ID, "flashLight.position");
-		flDirection = glGetUniformLocation(this->ID, "flashLight.direction");
-		flCutoff = glGetUniformLocation(this->ID, "flashLight.cutoff");
-		flOuterCutoff = glGetUniformLocation(this->ID, "flashLight.outerCutoff");
-		flAmbient = glGetUniformLocation(this->ID, "flashLight.ambient");
-		flDiffuse = glGetUniformLocation(this->ID, "flashLight.diffuse");
-		flSpecular = glGetUniformLocation(this->ID, "flashLight.specular");
-		flConst = glGetUniformLocation(this->ID, "flashLight.constant");
-		flLinear = glGetUniformLocation(this->ID, "flashLight.linear");
-		flQuadratic = glGetUniformLocation(this->ID, "flashLight.quadratic");
+		uniforms.flPosition = glGetUniformLocation(this->ID, "flashLight.position");
+		uniforms.flDirection = glGetUniformLocation(this->ID, "flashLight.direction");
+		uniforms.flCutoff = glGetUniformLocation(this->ID, "flashLight.cutoff");
+		uniforms.flOuterCutoff = glGetUniformLocation(this->ID, "flashLight.outerCutoff");
+		uniforms.flAmbient = glGetUniformLocation(this->ID, "flashLight.ambient");
+		uniforms.flDiffuse = glGetUniformLocation(this->ID, "flashLight.diffuse");
+		uniforms.flSpecular = glGetUniformLocation(this->ID, "flashLight.specular");
+		uniforms.flConst = glGetUniformLocation(this->ID, "flashLight.constant");
+		uniforms.flLinear = glGetUniformLocation(this->ID, "flashLight.linear");
+		uniforms.flQuadratic = glGetUniformLocation(this->ID, "flashLight.quadratic");
 
-		viewPos = glGetUniformLocation(this->ID, "viewPos");
-		model = glGetUniformLocation(this->ID, "model");
-		skybox = glGetUniformLocation(this->ID, "skybox");
+		uniforms.viewPos = glGetUniformLocation(this->ID, "viewPos");
+		uniforms.model = glGetUniformLocation(this->ID, "model");
+		uniforms.skybox = glGetUniformLocation(this->ID, "skybox");
 
 	}
 
 	void setupGeneral(glm::vec3& viewPos, glm::mat4& model, int skybox)
 	{
-		glUniform3fv(this->viewPos, 1, &viewPos[0]);
-		glUniformMatrix4fv(this->model, 1, GL_FALSE, &model[0][0]);
-		glUniform1i(this->skybox, skybox);
+		glUniform3fv(this->uniforms.viewPos, 1, &viewPos[0]);
+		glUniformMatrix4fv(this->uniforms.model, 1, GL_FALSE, &model[0][0]);
+		glUniform1i(this->uniforms.skybox, skybox);
 	}
 
-	void setupMaterial(glm::vec3& ambient, glm::vec3& diffuse, glm::vec3& specular, float shine)
+	void updateMaterial()
 	{
 		if (!isTextured)
 		{
-			glUniform3fv(matAmbient, 1, &ambient[0]);
-			glUniform3fv(matDiffuse, 1, &diffuse[0]);
+			glUniform3fv(uniforms.matAmbient, 1, &matAmbient[0]);
+			glUniform3fv(uniforms.matDiffuse, 1, &matDiffuse[0]);
 		}
-		glUniform3fv(matSpecular, 1, &specular[0]);
-		glUniform1f(matShine, shine);
+		glUniform3fv(uniforms.matSpecular, 1, &matSpecular[0]);
+		glUniform1f(uniforms.matShine, matShine);
 	}
 
-	void setupPointLight(glm::vec3& pos, glm::vec3& ambient, glm::vec3& diffuse, glm::vec3& specular, float constant, float linear, float quadratic)
+	void updatePointLight()
 	{
-		glUniform3fv(plPosition, 1, &pos[0]);
-		glUniform3fv(plAmbient, 1, &ambient[0]);
-		glUniform3fv(plDiffuse, 1, &diffuse[0]);
-		glUniform3fv(plSpecular, 1, &specular[0]);
-		glUniform1f(plConst, constant);
-		glUniform1f(plLinear, linear);
-		glUniform1f(plQuadratic, quadratic);
+		glUniform3fv(uniforms.plPosition, 1, &plPosition[0]);
+		glUniform3fv(uniforms.plAmbient, 1, &plAmbient[0]);
+		glUniform3fv(uniforms.plDiffuse, 1, &plDiffuse[0]);
+		glUniform3fv(uniforms.plSpecular, 1, &plSpecular[0]);
+		glUniform1f(uniforms.plConst, plConst);
+		glUniform1f(uniforms.plLinear, plLinear);
+		glUniform1f(uniforms.plQuadratic, plQuadratic);
 	}
 	
-	void setupDirecitonalLight(glm::vec3& dir, glm::vec3& ambient, glm::vec3& diffuse, glm::vec3& specular)
+	void updateDirecitonalLight()
 	{
-		glUniform3fv(dlDirection, 1, &dir[0]);
-		glUniform3fv(dlAmbient, 1, &ambient[0]);
-		glUniform3fv(dlDiffuse, 1, &diffuse[0]);
-		glUniform3fv(dlSpecular, 1, &specular[0]);
+		glUniform3fv(uniforms.dlDirection, 1, &dlDirection[0]);
+		glUniform3fv(uniforms.dlAmbient, 1, &dlAmbient[0]);
+		glUniform3fv(uniforms.dlDiffuse, 1, &dlDiffuse[0]);
+		glUniform3fv(uniforms.dlSpecular, 1, &dlSpecular[0]);
 	}
 
-	void setupFlashLight(glm::vec3& pos, glm::vec3& dir, glm::vec3& ambient, glm::vec3& diffuse, glm::vec3& specular, float constant, float linear, float quadratic, float cutoff, float outerCutoff)
+	void setupFlashLight(glm::vec3 position, glm::vec3 direction)
 	{
-		glUniform3fv(flPosition, 1, &pos[0]);
-		glUniform3fv(flDirection, 1, &dir[0]);
-		glUniform3fv(flAmbient, 1, &ambient[0]);
-		glUniform3fv(flDiffuse, 1, &diffuse[0]);
-		glUniform3fv(flSpecular, 1, &specular[0]);
-		glUniform1f(flConst, constant);
-		glUniform1f(flLinear, linear);
-		glUniform1f(flQuadratic, quadratic);
-		glUniform1f(flCutoff, cutoff);
-		glUniform1f(flOuterCutoff, outerCutoff);
+		glUniform3fv(uniforms.flPosition, 1, &position[0]);
+		glUniform3fv(uniforms.flDirection, 1, &direction[0]);
+		glUniform3fv(uniforms.flAmbient, 1, &flAmbient[0]);
+		glUniform3fv(uniforms.flDiffuse, 1, &flDiffuse[0]);
+		glUniform3fv(uniforms.flSpecular, 1, &flSpecular[0]);
+		glUniform1f(uniforms.flConst, flConst);
+		glUniform1f(uniforms.flLinear, flLinear);
+		glUniform1f(uniforms.flQuadratic, flQuadratic);
+		glUniform1f(uniforms.flCutoff, flCutoff);
+		glUniform1f(uniforms.flOuterCutoff, flOuterCutoff);
 	}
 
+private:
+	DiffuseShaderUniforms uniforms;
 };
 
 #endif

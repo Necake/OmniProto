@@ -44,6 +44,7 @@ float falloffRadius = 2.0f;
 glm::vec3 projectilePos(0.0f, 0.0f, 0.0f);
 
 bool simulationStarted = false;
+bool blinn = false;
 
 extern "C"
 { //Use the discrete GPU instead of the onboard GPU (AMD only, for NVidia see http://developer.download.nvidia.com/devzone/devcenter/gamegraphics/files/OptimusRenderingPolicies.pdf)
@@ -90,6 +91,7 @@ int main()
 	glEnable(GL_BLEND); //Enable alpha blending
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //Set according blend mode
 	glLineWidth(2.5); //Set wireframe line width a bit thicker than normal
+	glEnable(GL_FRAMEBUFFER_SRGB);
 
 	//================================================================================
 	//Geometry setup
@@ -143,6 +145,30 @@ int main()
 
 	//Loading and compiling shaders (TODO: move to resource manager)
 	DiffuseShader diffuseShader(true);
+	diffuseShader.matAmbient = glm::vec3(0.34f, 1.0f, 0.75f);
+	diffuseShader.matDiffuse = glm::vec3(1.0f, 0.34f, 0.95f);
+	diffuseShader.matSpecular = glm::vec3(0.5f, 0.5f, 0.5f);
+	diffuseShader.matShine = 32.0f;
+	diffuseShader.plPosition = lightPos;
+	diffuseShader.plAmbient = glm::vec3(0.4f, 0.4f, 0.4f);
+	diffuseShader.plDiffuse = glm::vec3(0.8f, 0.8f, 0.8f);
+	diffuseShader.plSpecular = glm::vec3(1.0f, 1.0f, 1.0f);
+	diffuseShader.plConst = 1.0f;
+	diffuseShader.plLinear = 0.09f;
+	diffuseShader.plQuadratic = 0.032f;
+	diffuseShader.dlDirection = glm::vec3(1.0f, 1.0f, 0);
+	diffuseShader.dlAmbient = glm::vec3(0.2f, 0.1f, 0.05f);
+	diffuseShader.dlDiffuse = glm::vec3(0.4f, 0.2f, 0.1f);
+	diffuseShader.dlSpecular = glm::vec3(1.0f, 0.8f, 0.5f);
+	diffuseShader.flAmbient = glm::vec3(0, 0, 0);
+	diffuseShader.flDiffuse = glm::vec3(0.8f, 0.8f, 0.8f);
+	diffuseShader.flSpecular = glm::vec3(1.0f, 1.0f, 1.0f);
+	diffuseShader.flConst = 1.0f;
+	diffuseShader.flLinear = 0.09f;
+	diffuseShader.flQuadratic = 0.032f;
+	diffuseShader.flCutoff = glm::cos(glm::radians(12.5f));
+	diffuseShader.flOuterCutoff = glm::cos(glm::radians(17.5f));
+
 	//Shader diffuseShaderInstanced("../OmniProto/diffuseInstanced.vert", "../OmniProto/diffuse_tex.frag", "../OmniProto/diffuse.geom");
 	Shader normalShader("../OmniProto/drawNormals.vert", "../OmniProto/drawNormals.frag", "../OmniProto/calcNormals.geom");
 	Shader normalCalcShader("../OmniProto/simpleFalloff.vert", "../OmniProto/drawNormals.frag", "../OmniProto/simpleFalloff.geom");
@@ -157,6 +183,7 @@ int main()
 	ResourceManager::loadTexture("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/awesomeface.png", "face");
 	ResourceManager::loadTexture("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/container2.png", "container");
 	ResourceManager::loadTexture("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/container2_specular.png", "containerSpecular");
+	ResourceManager::loadTexture("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/wood.jpg", "wood");
 	const char* skyboxTextures[6] = { //Skybox textures for cubemap setup
 		"C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Skybox/right.png",
 		"C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Skybox/left.png",
@@ -171,11 +198,12 @@ int main()
 	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/sphereLowRes.obj", "sphereLowRes");
 	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/bulb.obj", "light");
 	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Planet/planet.obj", "planet");
-	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/Asteroid/rock.obj", "asteroid");
+	ResourceManager::loadModel("C:/Users/Nemanja/Documents/_Dev/OpenGLAssets/floorPlane.obj", "floor");
 	ResourceManager::getModel("sphere").getSpecs();
 	ResourceManager::getModel("light").getSpecs();
+	ResourceManager::getModel("floor").getSpecs();
 	RayUtil::initAxes(); //Allocating memory and initializing axis rays
-	Ray projectileRay(glm::vec3(0, 0, 0), glm::vec3(0, -0.01, 0), glm::vec3(1, 1, 1)); //Projectile ray for affecting falloff (see simpleFalloff shader)
+	Ray projectileRay(glm::vec3(0, 0, 0), glm::vec3(0, -0.01, 0), glm::vec3(1, 0, 1)); //Projectile ray for affecting falloff (see simpleFalloff shader)
 
 	//VAO and VBO for the skybox
 	unsigned int skyboxVAO, skyboxVBO;
@@ -317,53 +345,16 @@ int main()
 		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
 		model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
 		
+
+		diffuseShader.setInt("blinn", blinn);
 		diffuseShader.setupGeneral(cam.Position, model, 4);
-		glm::vec3 ambient = glm::vec3(0.34f, 1.0f, 0.75f);
-		glm::vec3 diffuse = glm::vec3(1.0f, 0.34f, 0.95f);
-		glm::vec3 specular = glm::vec3(0.5f, 0.5f, 0.5f);
-		diffuseShader.setupMaterial(ambient, diffuse, specular, 32.0f);
-		ambient = glm::vec3(0.4f, 0.4f, 0.4f);
-		diffuse = glm::vec3(0.8f, 0.8f, 0.8f);
-		specular = glm::vec3(1.0f, 1.0f, 1.0f);
-		diffuseShader.setupPointLight(lightPos, ambient, diffuse, specular, 1.0f, 0.09f, 0.032f);
-		glm::vec3 dir = glm::vec3(1.0f, 1.0f, 0);
-		ambient = glm::vec3(0.2f, 0.1f, 0.05f);
-		diffuse = glm::vec3(0.4f, 0.2f, 0.1f);
-		specular = glm::vec3(1.0f, 0.8f, 0.5f);
-		diffuseShader.setupDirecitonalLight(dir, ambient, diffuse, specular);
-		ambient = glm::vec3(0, 0, 0);
-		diffuse = glm::vec3(0.8f, 0.8f, 0.8f);
-		specular = glm::vec3(1.0f, 1.0f, 1.0f);
-		diffuseShader.setupFlashLight(cam.Position, cam.Front, ambient, diffuse, specular, 1.0f, 0.09f, 0.032f, glm::cos(glm::radians(12.5f)), glm::cos(glm::radians(17.5f)));
-		/*diffuseShader.setMat4("model", model);
-		diffuseShader.setVec3("material.ambient", 0.34f, 1.0f, 0.75f);
-		diffuseShader.setVec3("material.diffuse", 1.0f, 0.34f, 0.95f);
-		diffuseShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
-		diffuseShader.setFloat("material.shininess", 32.0f);
-		diffuseShader.setVec3("pointLight.position", lightPos);
-		diffuseShader.setVec3("pointLight.ambient", 0.4f, 0.4f, 0.4f);
-		diffuseShader.setVec3("pointLight.diffuse", 0.8f, 0.8f, 0.8f);
-		diffuseShader.setVec3("pointLight.specular", 1.0f, 1.0f, 1.0f);
-		diffuseShader.setFloat("pointLight.constant", 1.0f);
-		diffuseShader.setFloat("pointLight.linear", 0.09f);
-		diffuseShader.setFloat("pointLight.quadratic", 0.032f);
-		diffuseShader.setVec3("dirLight.direction", 1.0f, 1.0f, 0);
-		diffuseShader.setVec3("dirLight.ambient", 0.2f, 0.1f, 0.05f);
-		diffuseShader.setVec3("dirLight.diffuse", 0.4f, 0.2f, 0.1f);
-		diffuseShader.setVec3("dirLight.specular", 1.0f, 0.8f, 0.5f);
-		diffuseShader.setVec3("flashLight.position", cam.Position);
-		diffuseShader.setVec3("flashLight.direction", cam.Front);
-		diffuseShader.setFloat("flashLight.cutoff", glm::cos(glm::radians(12.5f)));
-		diffuseShader.setFloat("flashLight.outerCutoff", glm::cos(glm::radians(17.5f)));
-		diffuseShader.setFloat("flashLight.constant", 1.0f);
-		diffuseShader.setFloat("flashLight.linear", 0.09f);
-		diffuseShader.setFloat("flashLight.quadratic", 0.032f);
-		diffuseShader.setVec3("flashLight.ambient", 0, 0, 0);
-		diffuseShader.setVec3("flashLight.diffuse", 0.8f, 0.8f, 0.8f);
-		diffuseShader.setVec3("flashLight.specular", 1.0f, 1.0f, 1.0f);
-		diffuseShader.setVec3("viewPos", cam.Position);*/
+		diffuseShader.updateMaterial();
+		diffuseShader.updatePointLight();
+		diffuseShader.updateDirecitonalLight();
+		diffuseShader.setupFlashLight(cam.Position, cam.Front);
 		diffuseShader.setInt("material.texture_diffuse1", 0);
 		diffuseShader.setInt("material.texture_specular1", 1);
+		diffuseShader.setFloat("material.reflectiveness", 0.5);
 		//diffuseShader.setFloat("time", (float)glfwGetTime());
 		glActiveTexture(GL_TEXTURE0); //Bind externally loaded textures to model
 		ResourceManager::getTexture("container").bind();
@@ -374,6 +365,15 @@ int main()
 		//normalShader.use();
 		//normalShader.setMat4("model", model);
 		//ResourceManager::getModel("sphere").draw(normalShader);
+
+		diffuseShader.use();
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-5, -1, 0));
+		model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
+		diffuseShader.setMat4("model", model);
+		diffuseShader.setFloat("material.reflectiveness", 0.2);
+		ResourceManager::getModel("floor").draw(diffuseShader);
+
 		
 		diffuseShader.use();
 		model = glm::mat4(1.0f);
@@ -388,6 +388,7 @@ int main()
 		normalShader.use();
 		normalShader.setMat4("model", model);
 		ResourceManager::getModel("sphere").draw(normalShader);
+
 
 		if(simulationStarted)
 			particle.update(deltaTime);
@@ -520,5 +521,14 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 	{
 		simulationStarted = true;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS)
+	{
+		blinn = true;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS)
+	{
+		blinn = false;
 	}
 }
