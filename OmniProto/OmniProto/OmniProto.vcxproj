@@ -186,10 +186,15 @@
     <None Include="basicModel.frag" />
     <None Include="basicModel.vert" />
     <None Include="calcNormals.geom" />
+    <None Include="debugQuad.frag" />
+    <None Include="debugQuad.vert" />
     <None Include="diffuse.frag" />
     <None Include="diffuse.geom" />
     <None Include="diffuse.vert" />
     <None Include="diffuseInstanced.vert" />
+    <None Include="diffuseShadows.frag" />
+    <None Include="diffuseShadows.geom" />
+    <None Include="diffuseShadows.vert" />
     <None Include="diffuse_tex.frag">
       <SubType>
       </SubType>
@@ -202,6 +207,8 @@
     <None Include="instancing.vert" />
     <None Include="ray.frag" />
     <None Include="ray.vert" />
+    <None Include="simpleDepthShader.frag" />
+    <None Include="simpleDepthShader.vert" />
     <None Include="simpleFalloff.frag" />
     <None Include="simpleFalloff.geom" />
     <None Include="simpleFalloff.vert" />

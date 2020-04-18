@@ -172,5 +172,26 @@
     <None Include="diffuseInstanced.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="simpleDepthShader.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="simpleDepthShader.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="debugQuad.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="debugQuad.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="diffuseShadows.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="diffuseShadows.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="diffuseShadows.geom">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -32,6 +32,9 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 void setupSharedMatrices(GLFWwindow* window, unsigned int UBOMatrices, glm::mat4* projection, glm::mat4* view);
 void drawDeformable(glm::mat4* model, Shader* shader);
+void renderScene(Shader* rayShader, Shader* modelShader, Shader* normalShader, Shader* skyboxShader, DiffuseShader* diffuseShader, Ray* projectileRay, Cubemap skybox, glm::mat4 projection, unsigned int skyboxVAO);
+void renderShadowPass(Shader* simpleDepthShader, glm::mat4 projection);
+void renderQuad();
 
 //Program-wide constants
 int windowWidth = 800; int windowHeight = 800;
@@ -43,7 +46,7 @@ float lastY = windowHeight / 2.0f;
 bool firstMouse = true, isWireframe = false;
 //Falloff related constants (see simpleFalloff shader)
 float falloffRadius = 2.0f;
-glm::vec3 projectilePos(0.0f, 0.0f, 0.0f);
+glm::vec3 projectilePos(0.0f, 3.0f, 0.0f);
 
 bool simulationStarted = false;
 bool blinn = false;
@@ -158,7 +161,7 @@ int main()
 	diffuseShader.plConst = 1.0f;
 	diffuseShader.plLinear = 0.09f;
 	diffuseShader.plQuadratic = 0.032f;
-	diffuseShader.dlDirection = glm::vec3(1.0f, 1.0f, 0);
+	diffuseShader.dlDirection = glm::normalize(glm::vec3(2.0f, -4.0f, 1.0f));
 	diffuseShader.dlAmbient = glm::vec3(0.2f, 0.1f, 0.05f);
 	diffuseShader.dlDiffuse = glm::vec3(0.4f, 0.2f, 0.1f);
 	diffuseShader.dlSpecular = glm::vec3(1.0f, 0.8f, 0.5f);
@@ -178,7 +181,9 @@ int main()
 	Shader modelShader("../OmniProto/simpleFalloff.vert", "../OmniProto/simpleFalloff.frag", "../OmniProto/simpleFalloff.geom");
 	Shader rayShader("../OmniProto/ray.vert", "../OmniProto/ray.frag");
 	Shader skyboxShader("../OmniProto/skybox.vert", "../OmniProto/skybox.frag");
-
+	Shader simpleDepthShader("../OmniProto/simpleDepthShader.vert", "../OmniProto/simpleDepthShader.frag");
+	Shader debugQuad("../OmniProto/debugQuad.vert", "../OmniProto/debugQuad.frag");
+	
 	Shader instanceShader("../OmniProto/instancing.vert", "../OmniProto/instancing.frag");
 
 	//Loading textures
@@ -298,7 +303,7 @@ int main()
 	unsigned int depthMapFBO;
 	glGenFramebuffers(1, &depthMapFBO);
 
-	const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+	const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
 
 	unsigned int depthMap;
 	glGenTextures(1, &depthMap);
@@ -306,14 +311,18 @@ int main()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
 	glReadBuffer(GL_NONE);
 	glDrawBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	float near_plane = 1.0f, far_plane = 15.0f;
 
 	//================================================================================
 	//Main loop
@@ -326,99 +335,49 @@ int main()
 		processInput(window);
 
 
-		glClearColor(.05f, 0.05f, .05f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glm::mat4 lightProjection = glm::ortho(-15.0f, 15.0f, -15.0f, 15.0f, near_plane, far_plane);
+		glm::mat4 lightView = glm::lookAt(glm::vec3(-2.0f, 4.0f, -1.0f),
+			glm::vec3(0.0f, 0.0f, 0.0f),
+			glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
 		glm::mat4 projection;
 		glm::mat4 view;
+
+		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		setupSharedMatrices(window, UBOMatrices, &projection, &view);
+		simpleDepthShader.use();
+		simpleDepthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+		glCullFace(GL_FRONT);
+		renderShadowPass(&simpleDepthShader, projection);
+		glCullFace(GL_BACK);
+		renderShadowPass(&simpleDepthShader, projection);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+		glViewport(0, 0, windowWidth, windowHeight);
+		glClearColor(.05f, 0.05f, .05f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 		setupSharedMatrices(window, UBOMatrices, &projection, &view);
 
-		//render XYZ axes
-		glm::mat4 model = glm::mat4(1.0f);
-		RayUtil::renderAxes(model, rayShader);
-
-		if (isWireframe)
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Draw everything in wireframe from this point if told so (see processInput)
-		
-		drawDeformable(&model, &modelShader);
-
-		//Draw projectile ray
-		rayShader.use();
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, projectilePos);
-		rayShader.setMat4("model", model);
-		projectileRay.draw(rayShader);
-
-		//Render the two textured spheres, same idea as above, just with more light-related shader calls (see diffuse / diffuse_tex shader)
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(2, 0, 0));
-		model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
-		model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
-		
 		diffuseShader.use();
-		diffuseShader.setInt("blinn", blinn);
-		diffuseShader.setupGeneral(cam.Position, model, 4);
-		diffuseShader.updateMaterial();
-		diffuseShader.updatePointLight();
-		diffuseShader.updateDirecitonalLight();
-		diffuseShader.setupFlashLight(cam.Position, cam.Front);
-		diffuseShader.setInt("skybox", 4);
-		glActiveTexture(GL_TEXTURE4); //Bind skybox to the diffuse shader for reflections
-		skybox.bind();
+		diffuseShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+		glActiveTexture(GL_TEXTURE5);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		diffuseShader.setInt("shadowMap", 5);
 
-		diffuseShader.setInt("material.texture_diffuse1", 0);
-		diffuseShader.setInt("material.texture_specular1", 1);
-		diffuseShader.setFloat("material.reflectiveness", 0.5);
-		ResourceManager::getModel("sphere").draw(diffuseShader);
+		renderScene(&rayShader, &modelShader, &normalShader, &skyboxShader, &diffuseShader, &projectileRay, skybox, projection, skyboxVAO);
+		debugQuad.use();
+		debugQuad.setFloat("near_plane", near_plane);
+		debugQuad.setFloat("far_plane", far_plane);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		if(!blinn)
+			renderQuad();
 
-		diffuseShader.use();
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(20, 0, 0));
-		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
-		diffuseShader.setMat4("model", model);
-		ResourceManager::getModel("sphere").draw(diffuseShader);
-
-		normalShader.use();
-		normalShader.setMat4("model", model);
-		ResourceManager::getModel("sphere").draw(normalShader);
-
-		//draw floor
-		diffuseShader.use();
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(-5, -1, 0));
-		model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
-		diffuseShader.setMat4("model", model);
-		diffuseShader.setFloat("material.reflectiveness", 0.2);
-		ResourceManager::getModel("floor").draw(diffuseShader);
-
-		if(simulationStarted)
-			particle.update(deltaTime);
-
-		//Draw skybox, disable wireframe and change depth testing for faster drawing
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		glDepthFunc(GL_LEQUAL);
-
-		glDepthMask(false);
-		skyboxShader.use();
-		skyboxShader.setMat4("view", glm::mat4(glm::mat3(cam.GetViewMatrix()))); //View matrix is a bit different here, since we disregard translations
-		skyboxShader.setMat4("projection", projection);
-		glBindVertexArray(skyboxVAO);
-		skybox.bind();
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glDepthMask(true);
-
-		//Reenable wireframe if needed and return depth func to normal
-		glDepthFunc(GL_LESS);
-		if (isWireframe)
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-		//Draw light, half transparent
-		unlitShader.use();
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, lightPos);
-		model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
-		unlitShader.setMat4("model", model);
-		ResourceManager::getModel("light").draw(unlitShader);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -429,6 +388,169 @@ int main()
 	return 0;
 }
 
+void renderScene(Shader* rayShader, Shader* modelShader, Shader* normalShader, Shader* skyboxShader, DiffuseShader* diffuseShader, Ray* projectileRay, Cubemap skybox, glm::mat4 projection, unsigned int skyboxVAO)
+{
+
+	//render XYZ axes
+	glm::mat4 model = glm::mat4(1.0f);
+	RayUtil::renderAxes(model, *rayShader);
+
+	if (isWireframe)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Draw everything in wireframe from this point if told so (see processInput)
+
+	drawDeformable(&model, modelShader);
+
+	//Draw projectile ray
+	rayShader->use();
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, projectilePos);
+	rayShader->setMat4("model", model);
+	projectileRay->draw(*rayShader);
+
+	//Render the two textured spheres, same idea as above, just with more light-related shader calls (see diffuse / diffuse_tex shader)
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(2, 0, 0));
+	model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
+	model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
+
+	diffuseShader->use();
+	diffuseShader->setInt("blinn", blinn);
+	diffuseShader->setupGeneral(cam.Position, model, 4);
+	diffuseShader->updateMaterial();
+	diffuseShader->updatePointLight();
+	diffuseShader->updateDirecitonalLight();
+	diffuseShader->setupFlashLight(cam.Position, cam.Front);
+	diffuseShader->setInt("skybox", 4);
+	glActiveTexture(GL_TEXTURE4); //Bind skybox to the diffuse shader for reflections
+	skybox.bind();
+
+	diffuseShader->setInt("material.texture_diffuse1", 0);
+	diffuseShader->setInt("material.texture_specular1", 1);
+	diffuseShader->setFloat("material.reflectiveness", 0.5);
+	ResourceManager::getModel("sphere").draw(*diffuseShader);
+
+	diffuseShader->use();
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(5, 0, 0));
+	model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
+	diffuseShader->setMat4("model", model);
+	ResourceManager::getModel("sphere").draw(*diffuseShader);
+
+	normalShader->use();
+	normalShader->setMat4("model", model);
+	ResourceManager::getModel("sphere").draw(*normalShader);
+
+	//draw floor
+	diffuseShader->use();
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-5, -0.5f, 0));
+	model = glm::scale(model, glm::vec3(2, 2, 2));
+	diffuseShader->setMat4("model", model);
+	diffuseShader->setFloat("material.reflectiveness", 0.2);
+	ResourceManager::getModel("floor").draw(*diffuseShader);
+
+	//if (simulationStarted)
+	//	particle.update(deltaTime);
+
+	//Draw skybox, disable wireframe and change depth testing for faster drawing
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDepthFunc(GL_LEQUAL);
+
+	glDepthMask(false);
+	skyboxShader->use();
+	skyboxShader->setMat4("view", glm::mat4(glm::mat3(cam.GetViewMatrix()))); //View matrix is a bit different here, since we disregard translations
+	skyboxShader->setMat4("projection", projection);
+	glBindVertexArray(skyboxVAO);
+	skybox.bind();
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glDepthMask(true);
+
+	//Reenable wireframe if needed and return depth func to normal
+	glDepthFunc(GL_LESS);
+	if (isWireframe)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	//Draw light, half transparent
+	/*unlitShader.use();
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, lightPos);
+	model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
+	unlitShader.setMat4("model", model);
+	ResourceManager::getModel("light").draw(unlitShader);*/
+}
+void renderShadowPass(Shader* simpleDepthShader, glm::mat4 projection)
+{
+
+	glm::mat4 model = glm::mat4(1.0f);
+
+	if (isWireframe)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //Draw everything in wireframe from this point if told so (see processInput)
+
+	drawDeformable(&model, simpleDepthShader);
+
+
+	//Render the two textured spheres, same idea as above, just with more light-related shader calls (see diffuse / diffuse_tex shader)
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(2, 0, 0));
+	model = glm::rotate(model, (float)glfwGetTime(), glm::normalize(glm::vec3(0.5f, 0.5f, 0.0f)));
+	model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
+
+	simpleDepthShader->setMat4("model", model);
+	ResourceManager::getModel("sphere").draw(*simpleDepthShader);
+
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(5, 0, 0));
+	model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
+	simpleDepthShader->setMat4("model", model);
+	ResourceManager::getModel("sphere").draw(*simpleDepthShader);
+
+
+	//draw floor
+	simpleDepthShader->use();
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-5, -0.5f, 0));
+	model = glm::scale(model, glm::vec3(2, 2, 2));
+	simpleDepthShader->setMat4("model", model);
+	ResourceManager::getModel("floor").draw(*simpleDepthShader);
+
+
+	//Draw light, half transparent
+	/*unlitShader.use();
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, lightPos);
+	model = glm::scale(model, glm::vec3(.01f, .01f, .01f));
+	unlitShader.setMat4("model", model);
+	ResourceManager::getModel("light").draw(unlitShader);*/
+}
+
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderQuad()
+{
+	if (quadVAO == 0)
+	{
+		float quadVertices[] = {
+			// positions        // texture Coords
+			-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+			-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+			 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+			 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+		};
+		// setup plane VAO
+		glGenVertexArrays(1, &quadVAO);
+		glGenBuffers(1, &quadVBO);
+		glBindVertexArray(quadVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	}
+	glBindVertexArray(quadVAO);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
+}
 //Callback function for window resizing
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {

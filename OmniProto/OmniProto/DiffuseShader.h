@@ -57,7 +57,7 @@ public:
 	float flConst, flLinear, flQuadratic, flCutoff, flOuterCutoff;
 	//====================================================================================================
 	DiffuseShader(bool isTextured) : 
-		Shader("../OmniProto/diffuse.vert", "../OmniProto/diffuse_tex.frag", "../OmniProto/diffuse.geom"), isTextured(isTextured)
+		Shader("../OmniProto/diffuseShadows.vert", "../OmniProto/diffuseShadows.frag", "../OmniProto/diffuseShadows.geom"), isTextured(isTextured)
 	{
 		uniforms.matAmbient = glGetUniformLocation(this->ID, "material.ambient");
 		if (isTextured)
